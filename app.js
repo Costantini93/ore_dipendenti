@@ -1,38 +1,38 @@
 // Database simulato (in produzione usare un database reale)
 const DB = {
     users: {
-        'alessandro.costantini': {
-            username: 'alessandro.costantini',
+        'alessandro_costantini': {
+            username: 'alessandro_costantini',
             password: null, // null = primo accesso
             name: 'Alessandro Costantini',
             role: 'admin'
         },
-        'denise.raimondi': {
-            username: 'denise.raimondi',
+        'denise_raimondi': {
+            username: 'denise_raimondi',
             password: null,
             name: 'Denise Raimondi',
             role: 'employee'
         },
-        'sandy.oduro': {
-            username: 'sandy.oduro',
+        'sandy_oduro': {
+            username: 'sandy_oduro',
             password: null,
             name: 'Sandy Oduro',
             role: 'employee'
         },
-        'luca.avesani': {
-            username: 'luca.avesani',
+        'luca_avesani': {
+            username: 'luca_avesani',
             password: null,
             name: 'Luca Avesani',
             role: 'employee'
         },
-        'sophie.rizzin': {
-            username: 'sophie.rizzin',
+        'sophie_rizzin': {
+            username: 'sophie_rizzin',
             password: null,
             name: 'Sophie Rizzin',
             role: 'employee'
         },
-        'sofia.bilianska': {
-            username: 'sofia.bilianska',
+        'sofia_bilianska': {
+            username: 'sofia_bilianska',
             password: null,
             name: 'Sofia Bilianska',
             role: 'employee'
