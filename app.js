@@ -104,13 +104,15 @@ function saveDataToStorage() {
         users: usersToSave
     }));
     
-    // Salva timeEntries su Firebase
+    // Salva timeEntries su Firebase e ritorna una Promise
     if (typeof firebase !== 'undefined' && dbRef) {
-        dbRef.timeEntries.set(DB.timeEntries).catch((error) => {
+        return dbRef.timeEntries.set(DB.timeEntries).catch((error) => {
             console.error('Errore salvataggio Firebase:', error);
             alert('Errore nel salvare i dati. Controlla la connessione internet.');
         });
     }
+    
+    return Promise.resolve();
 }
 
 // Login Form
@@ -395,7 +397,7 @@ function renderCalendar() {
 
                 const time = document.createElement('div');
                 time.className = 'day-time';
-                time.textContent = `${entry.startTime} - ${entry.endTime}`;
+                time.innerHTML = `${entry.startTime}<br>-<br>${entry.endTime}`;
                 dayInfo.appendChild(time);
             } else {
                 const type = document.createElement('div');
@@ -464,8 +466,13 @@ function openTimeModal(dateStr, existingEntry) {
 }
 
 function closeModal() {
-    document.getElementById('timeModal').classList.remove('show');
+    const modal = document.getElementById('timeModal');
+    modal.classList.remove('show');
     document.getElementById('timeForm').reset();
+    
+    // Ripristina il tipo default a "work"
+    document.querySelector('input[name="dayType"][value="work"]').checked = true;
+    toggleTimeInputs();
 }
 
 // Gestione form inserimento ore
@@ -561,10 +568,19 @@ function saveTimeEntry() {
     }
 
     DB.timeEntries[viewingUser][dateStr] = entry;
-    saveDataToStorage();
     
-    closeModal();
-    renderCalendar();
+    // Salva e poi aggiorna l'interfaccia
+    saveDataToStorage().then(() => {
+        closeModal();
+        
+        // Aggiorna vista in base alla modalità corrente
+        if (currentView === 'calendar') {
+            renderCalendar();
+            updateMonthlySummary();
+        } else {
+            renderEmployeeTable();
+        }
+    });
 }
 
 // Aggiorna riepilogo mensile
@@ -631,7 +647,7 @@ function renderEmployeeTable() {
         const nameParts = employee.name.split(' ');
         const initials = nameParts.map(part => part.charAt(0).toUpperCase()).join('.');
         
-        th.textContent = employee.role === 'admin' ? initials + '★' : initials;
+        th.textContent = initials;
         th.title = employee.name + (employee.role === 'admin' ? ' (Admin)' : ''); // Tooltip con nome completo
         
         thead.appendChild(th);
@@ -708,7 +724,7 @@ function renderEmployeeTable() {
     
     // Riga totali
     const totalsRow = document.getElementById('tableTotals');
-    totalsRow.innerHTML = '<td class="sticky-col day-col"><strong>TOTALI</strong></td>';
+    totalsRow.innerHTML = '<td class="sticky-col day-col"><strong class="vertical-text">TOT</strong></td>';
     
     employees.forEach(employee => {
         const userEntries = DB.timeEntries[employee.username] || {};
