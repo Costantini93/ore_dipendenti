@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Ore Dipendenti</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- Login Page -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="logo">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h1>Gestione Ore</h1>
+                    <p>Accedi al sistema</p>
+                </div>
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Accedi</button>
+                    <div id="loginError" class="error-message"></div>
+                </form>
+                <div class="login-footer">
+                    <p>Primo accesso? Usa nome.cognome (es: denise.raimondi)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Page -->
+    <div id="appPage" class="page">
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-left">
+                    <div class="logo-small">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h2>Gestione Ore</h2>
+                </div>
+                <div class="navbar-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Esci</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <div class="container">
+                <!-- View Toggle (only for admin) -->
+                <div id="viewToggle" class="view-toggle" style="display: none;">
+                    <button id="calendarViewBtn" class="toggle-btn active">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" fill="currentColor"/>
+                        </svg>
+                        Vista Calendario
+                    </button>
+                    <button id="tableViewBtn" class="toggle-btn">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 3h18v2H3V3zm0 4h18v2H3V7zm0 4h18v2H3v-2zm0 4h18v2H3v-2zm0 4h18v2H3v-2z" fill="currentColor"/>
+                        </svg>
+                        Vista Tabella
+                    </button>
+                </div>
+
+                <!-- Calendar Header -->
+                <div class="calendar-header">
+                    <button id="prevMonth" class="btn btn-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="btn btn-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Admin User Selection -->
+                <div id="adminUserSelection" class="admin-section" style="display: none;">
+                    <label for="userSelect">Visualizza dipendente:</label>
+                    <select id="userSelect" class="user-select">
+                        <option value="alessandro.costantini">Alessandro Costantini (Tu)</option>
+                        <option value="denise.raimondi">Denise Raimondi</option>
+                        <option value="sandy.oduro">Sandy Oduro</option>
+                        <option value="luca.avesani">Luca Avesani</option>
+                        <option value="sophie.rizzin">Sophie Rizzin</option>
+                        <option value="sofia.bilianska">Sofia Bilianska</option>
+                    </select>
+                </div>
+
+                <!-- Monthly Summary -->
+                <div class="monthly-summary">
+                    <div class="summary-card">
+                        <div class="summary-label">Ore Totali</div>
+                        <div class="summary-value" id="totalHours">0.00</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Giorni Lavorativi</div>
+                        <div class="summary-value" id="workDays">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Ferie</div>
+                        <div class="summary-value" id="holidayDays">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">ROL</div>
+                        <div class="summary-value" id="rolDays">0</div>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div id="calendarView" class="view-section active">
+                    <div id="calendarGrid" class="calendar-grid"></div>
+                </div>
+
+                <!-- Table View -->
+                <div id="tableView" class="view-section">
+                    <div class="table-container">
+                        <div class="table-wrapper">
+                            <table id="employeeTable" class="employee-table">
+                                <thead>
+                                    <tr id="tableHeader">
+                                        <th class="sticky-col day-col">#</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeTableBody">
+                                </tbody>
+                                <tfoot>
+                                    <tr id="tableTotals" class="totals-row">
+                                        <td class="sticky-col"><strong>TOTALI</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for First Time Password Setup -->
+    <div id="firstTimeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Benvenuto! Imposta la tua Password</h3>
+            </div>
+            <form id="firstTimeForm" class="time-form">
+                <div class="form-group">
+                    <label for="newPassword">Nuova Password</label>
+                    <input type="password" id="newPassword" name="newPassword" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Conferma Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="4">
+                </div>
+                <div id="passwordError" class="error-message"></div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Imposta Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Time Entry -->
+    <div id="timeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Inserisci Ore</h3>
+                <button class="modal-close" id="closeModal">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="timeForm" class="time-form">
+                <input type="hidden" id="selectedDate">
+                
+                <div class="form-group">
+                    <label>Tipo Giornata</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="dayType" value="work" checked>
+                            <span>Lavoro</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="dayType" value="off">
+                            <span>OFF</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="dayType" value="ferie">
+                            <span>Ferie</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="dayType" value="rol">
+                            <span>ROL</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="timeInputs" class="time-inputs">
+                    <div class="form-group">
+                        <label for="startTime">Inizio Turno</label>
+                        <input type="time" id="startTime" name="startTime">
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">Fine Turno</label>
+                        <input type="time" id="endTime" name="endTime">
+                    </div>
+                    <div class="hours-display" id="hoursDisplay">
+                        <span class="hours-label">Ore Totali:</span>
+                        <span class="hours-value" id="calculatedHours">0.00</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
