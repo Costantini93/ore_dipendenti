@@ -40,7 +40,7 @@
                     <div id="loginError" class="error-message"></div>
                 </form>
                 <div class="login-footer">
-                    <p>Primo accesso? Usa nome.cognome (es: denise.raimondi)</p>
+                    <p>Primo accesso? Usa nome_cognome (es: denise_raimondi)</p>
                 </div>
             </div>
         </div>
@@ -102,12 +102,12 @@
                 <div id="adminUserSelection" class="admin-section" style="display: none;">
                     <label for="userSelect">Visualizza dipendente:</label>
                     <select id="userSelect" class="user-select">
-                        <option value="alessandro.costantini">Alessandro Costantini (Tu)</option>
-                        <option value="denise.raimondi">Denise Raimondi</option>
-                        <option value="sandy.oduro">Sandy Oduro</option>
-                        <option value="luca.avesani">Luca Avesani</option>
-                        <option value="sophie.rizzin">Sophie Rizzin</option>
-                        <option value="sofia.bilianska">Sofia Bilianska</option>
+                        <option value="alessandro_costantini">Alessandro Costantini (Tu)</option>
+                        <option value="denise_raimondi">Denise Raimondi</option>
+                        <option value="sandy_oduro">Sandy Oduro</option>
+                        <option value="luca_avesani">Luca Avesani</option>
+                        <option value="sophie_rizzin">Sophie Rizzin</option>
+                        <option value="sofia_bilianska">Sofia Bilianska</option>
                     </select>
                 </div>
 
@@ -150,7 +150,7 @@
                                 </tbody>
                                 <tfoot>
                                     <tr id="tableTotals" class="totals-row">
-                                        <td class="sticky-col"><strong>TOTALI</strong></td>
+                                        <td class="sticky-col"><strong class="vertical-text">TOT</strong></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -170,7 +170,7 @@
             <form id="firstTimeForm" class="time-form">
                 <div class="form-group">
                     <label for="newPassword">Nuova Password</label>
-                    <input type="password" id="newPassword" name="newPassword" required minlength="4">
+                    <input type="password" id="newPassword" name="newPassword" required minlength="4" placeholder="Minimo 4 caratteri">
                 </div>
                 <div class="form-group">
                     <label for="confirmPassword">Conferma Password</label>
