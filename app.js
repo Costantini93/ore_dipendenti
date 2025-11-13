@@ -48,33 +48,42 @@ let selectedUser = null; // Per l'admin
 let currentView = 'calendar'; // 'calendar' o 'table'
 
 // Inizializzazione
-document.addEventListener('DOMContentLoaded', () => {
-    loadDataFromStorage();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadDataFromStorage();
+    
+    // Controlla se c'è un utente salvato (auto-login)
+    const savedUsername = localStorage.getItem('loggedUser');
+    if (savedUsername && DB.users[savedUsername]) {
+        currentUser = DB.users[savedUsername];
+        selectedUser = savedUsername;
+        showPage('appPage');
+        initializeApp();
+    }
+    
     initLoginForm();
     initApp();
 });
 
 // Carica dati da Firebase
-function loadDataFromStorage() {
-    // Carica password salvate da localStorage (per sicurezza restano locali)
-    const savedData = localStorage.getItem('timeTrackingData');
-    if (savedData) {
+async function loadDataFromStorage() {
+    // Carica password da Firebase
+    if (typeof firebase !== 'undefined') {
         try {
-            const parsed = JSON.parse(savedData);
-            if (parsed.users) {
-                Object.keys(parsed.users).forEach(username => {
-                    if (DB.users[username] && parsed.users[username].password) {
-                        DB.users[username].password = parsed.users[username].password;
+            const snapshot = await dbRef.users.once('value');
+            const data = snapshot.val();
+            if (data) {
+                Object.keys(data).forEach(username => {
+                    if (DB.users[username] && data[username].password !== undefined) {
+                        DB.users[username].password = data[username].password;
                     }
                 });
             }
-        } catch (e) {
-            console.error('Errore caricamento password:', e);
+            console.log('✅ Password caricate da Firebase');
+        } catch (error) {
+            console.error('❌ Errore caricamento password:', error);
         }
-    }
-    
-    // Carica timeEntries da Firebase
-    if (typeof firebase !== 'undefined') {
+        
+        // Carica timeEntries da Firebase con listener real-time
         dbRef.timeEntries.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -82,6 +91,7 @@ function loadDataFromStorage() {
                 // Aggiorna UI se necessario
                 if (currentUser && currentView === 'calendar') {
                     renderCalendar();
+                    updateMonthlySummary();
                 } else if (currentUser && currentView === 'table') {
                     renderEmployeeTable();
                 }
@@ -92,20 +102,23 @@ function loadDataFromStorage() {
 
 // Salva dati in Firebase
 function saveDataToStorage() {
-    // Salva password localmente (per sicurezza)
-    const usersToSave = {};
-    Object.keys(DB.users).forEach(username => {
-        usersToSave[username] = {
-            password: DB.users[username].password
-        };
-    });
-    
-    localStorage.setItem('timeTrackingData', JSON.stringify({
-        users: usersToSave
-    }));
-    
-    // Salva timeEntries su Firebase e ritorna una Promise
+    // Salva password su Firebase
     if (typeof firebase !== 'undefined' && dbRef) {
+        const usersToSave = {};
+        Object.keys(DB.users).forEach(username => {
+            usersToSave[username] = {
+                password: DB.users[username].password
+            };
+        });
+        
+        console.log('💾 Salvataggio users su Firebase:', usersToSave);
+        dbRef.users.set(usersToSave).then(() => {
+            console.log('✅ Users salvati correttamente su Firebase');
+        }).catch((error) => {
+            console.error('❌ Errore salvataggio password Firebase:', error);
+        });
+        
+        // Salva timeEntries su Firebase e ritorna una Promise
         return dbRef.timeEntries.set(DB.timeEntries).catch((error) => {
             console.error('Errore salvataggio Firebase:', error);
             alert('Errore nel salvare i dati. Controlla la connessione internet.');
@@ -145,6 +158,7 @@ function initLoginForm() {
         if (user.password === password) {
             currentUser = user;
             selectedUser = username; // Tutti partono visualizzando se stessi
+            localStorage.setItem('loggedUser', username); // Salva per auto-login
             showPage('appPage');
             initializeApp();
             loginError.classList.remove('show');
@@ -177,14 +191,15 @@ function initLoginForm() {
 
         // Salva la nuova password
         DB.users[currentUser.username].password = newPassword;
-        saveDataToStorage();
-
-        // Chiudi modal e vai all'app
-        closeFirstTimeModal();
-        selectedUser = currentUser.username; // Tutti partono visualizzando se stessi
-        showPage('appPage');
-        initializeApp();
-        passwordError.classList.remove('show');
+        localStorage.setItem('loggedUser', currentUser.username); // Salva per auto-login
+        saveDataToStorage().then(() => {
+            // Chiudi modal e vai all'app
+            closeFirstTimeModal();
+            selectedUser = currentUser.username; // Tutti partono visualizzando se stessi
+            showPage('appPage');
+            initializeApp();
+            passwordError.classList.remove('show');
+        });
     });
 }
 
@@ -214,6 +229,7 @@ function initApp() {
     document.getElementById('logoutBtn').addEventListener('click', () => {
         currentUser = null;
         selectedUser = null;
+        localStorage.removeItem('loggedUser'); // Rimuovi auto-login
         showPage('loginPage');
         document.getElementById('loginForm').reset();
     });
@@ -243,6 +259,7 @@ function initApp() {
     document.getElementById('userSelect').addEventListener('change', (e) => {
         selectedUser = e.target.value;
         renderCalendar();
+        updateMonthlySummary();
     });
 
     // View Toggle
@@ -755,5 +772,18 @@ function renderEmployeeTable() {
             </div>
         `;
         totalsRow.appendChild(totalCell);
+    });
+}
+
+// Registra Service Worker per PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+                console.log('✅ Service Worker registrato:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('❌ Errore registrazione Service Worker:', error);
+            });
     });
 }
