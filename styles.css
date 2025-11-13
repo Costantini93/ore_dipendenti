@@ -1081,6 +1081,13 @@ body {
         max-width: 100vw;
     }
     
+    .view-section {
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: none;
+        height: auto;
+    }
+    
     .radio-group {
         grid-template-columns: 1fr;
     }
@@ -1233,13 +1240,21 @@ body {
     
     /* Fix tabella */
     .table-container {
-        margin: -1rem -0.5rem;
+        margin: 0;
         width: 100vw;
         position: relative;
         left: 50%;
         right: 50%;
         margin-left: -50vw;
         margin-right: -50vw;
+        overflow-x: auto;
+        overflow-y: visible;
+        max-height: none;
+        height: auto;
+    }
+    
+    .employee-table {
+        table-layout: auto;
     }
     
     .employee-col {
