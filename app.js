@@ -325,7 +325,7 @@ function initApp() {
 
         // Aggiorna password in Firebase
         try {
-            await update(ref(database, `users/${currentUser}`), {
+            await database.ref(`users/${currentUser}`).update({
                 password: newPassword
             });
 
@@ -400,7 +400,7 @@ function initApp() {
 
             try {
                 const targetUsername = editUserId || username;
-                await update(ref(database, `users/${targetUsername}`), userData);
+                await database.ref(`users/${targetUsername}`).update(userData);
                 
                 // Aggiorna DB locale
                 if (!DB.users[targetUsername]) {
@@ -589,17 +589,17 @@ async function editUser(username) {
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
     
-    // Converti valori vecchi (giorni) in ore se necessario
+    // Prendi i valori attuali
     let ferieOre = user.ferieResidue || 0;
     let rolOre = user.rolResidui || 0;
     
-    // Se i valori sono molto bassi (< 100), probabilmente sono in giorni, converti in ore
-    if (ferieOre < 100) {
-        ferieOre = ferieOre * 8;
-    }
-    if (rolOre < 100) {
-        rolOre = rolOre * 8;
-    }
+    // Se i valori sono decimali strani, arrotonda a multipli di 8
+    ferieOre = Math.round(ferieOre / 8) * 8;
+    rolOre = Math.round(rolOre / 8) * 8;
+    
+    // Se i valori sono 0 o molto bassi, imposta valori di default
+    if (ferieOre < 8) ferieOre = 208;
+    if (rolOre < 8) rolOre = 120;
     
     document.getElementById('userFerie').value = ferieOre;
     document.getElementById('userRol').value = rolOre;
@@ -618,8 +618,8 @@ async function deleteUser(username) {
     }
 
     try {
-        await remove(ref(database, `users/${username}`));
-        await remove(ref(database, `timeEntries/${username}`));
+        await database.ref(`users/${username}`).remove();
+        await database.ref(`timeEntries/${username}`).remove();
         delete DB.users[username];
         delete DB.timeEntries[username];
         
@@ -643,7 +643,7 @@ async function resetUserPassword(username) {
     }
 
     try {
-        await update(ref(database, `users/${username}`), {
+        await database.ref(`users/${username}`).update({
             password: newPassword
         });
         DB.users[username].password = newPassword;
