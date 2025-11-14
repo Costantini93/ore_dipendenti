@@ -316,6 +316,7 @@ function initApp() {
         currentUser = null;
         selectedUser = null;
         localStorage.removeItem('loggedUser'); // Rimuovi auto-login
+        document.getElementById('appFooter').style.display = 'none'; // Nascondi footer
         showPage('loginPage');
         document.getElementById('loginForm').reset();
     });
@@ -608,6 +609,9 @@ function initApp() {
 function initializeApp() {
     // Mostra nome utente
     document.getElementById('userDisplay').textContent = currentUser.name;
+
+    // Mostra footer
+    document.getElementById('appFooter').style.display = 'block';
 
     // Mostra/nascondi selezione admin e toggle vista
     if (currentUser.role === 'admin') {
