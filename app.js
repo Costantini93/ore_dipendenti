@@ -459,18 +459,22 @@ function initApp() {
         addUserBtn.addEventListener('click', () => {
             document.getElementById('userModalTitle').textContent = 'Aggiungi Utente';
             document.getElementById('editUserId').value = '';
-            userForm.reset();
             
-            // Imposta valori di default
-            document.getElementById('userPassword').value = '1234';
-            document.getElementById('userFerie').value = '0';
-            document.getElementById('userRol').value = '0';
-            
+            // Reset form prima di impostare i valori di default
             const usernameInput = document.getElementById('userUsername');
             usernameInput.disabled = false;
             usernameInput.readOnly = false;
             usernameInput.removeAttribute('required');
             usernameInput.style.backgroundColor = '#f8f9fa';
+            
+            // Svuota i campi manualmente senza usare reset()
+            document.getElementById('userName').value = '';
+            document.getElementById('userUsername').value = '';
+            document.getElementById('userPassword').value = '1234';
+            document.getElementById('userRole').value = 'employee';
+            document.getElementById('userFerie').value = '0';
+            document.getElementById('userRol').value = '0';
+            
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
