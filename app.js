@@ -506,6 +506,12 @@ function initApp() {
             const ferieResidue = parseFloat(document.getElementById('userFerie').value);
             const rolResidui = parseFloat(document.getElementById('userRol').value);
 
+            // Validazione username non vuoto
+            if (!username) {
+                alert('Username non può essere vuoto. Inserisci un nome completo.');
+                return;
+            }
+
             // Validazione username univoco (solo per nuovi utenti)
             if (!editUserId && DB.users[username]) {
                 alert('Username già esistente. Scegli un altro username.');
