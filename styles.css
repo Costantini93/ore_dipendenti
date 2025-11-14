@@ -1632,6 +1632,23 @@ body.dark-mode #holidayYearSelect {
     background: var(--bg-secondary);
 }
 
+/* Footer */
+footer {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 3rem;
+}
+
+footer strong {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+}
+
 /* Fix scroll orizzontale mobile */
 @media (max-width: 768px) {
     * {
