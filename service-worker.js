@@ -65,3 +65,45 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Push Notifications
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Promemoria Ore';
+  const options = {
+    body: data.body || 'Ricordati di inserire le tue ore!',
+    icon: '/ore_dipendenti/icon-192.png',
+    badge: '/ore_dipendenti/badge-72.png',
+    vibrate: [200, 100, 200],
+    tag: 'ore-reminder',
+    requireInteraction: false,
+    data: {
+      url: data.url || '/ore_dipendenti/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data.url || '/ore_dipendenti/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Se c'è già una finestra aperta, la focalizza
+        for (let client of clientList) {
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Altrimenti apri una nuova finestra
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});

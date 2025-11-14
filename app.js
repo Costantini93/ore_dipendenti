@@ -441,6 +441,12 @@ function initApp() {
     // Dark Mode Toggle
     document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
 
+    // Notifications Toggle
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', requestNotificationPermission);
+    }
+
     // Selezione utente per admin
     document.getElementById('userSelect').addEventListener('change', (e) => {
         selectedUser = e.target.value;
@@ -495,6 +501,9 @@ function initializeApp() {
     // Mostra balance ferie/ROL
     document.getElementById('leaveBalance').style.display = 'flex';
     updateLeaveBalance();
+
+    // Inizializza notifiche
+    initNotifications();
 
     switchView('calendar');
 }
@@ -1624,5 +1633,105 @@ function updateDarkModeIcon(isDark) {
     } else {
         // Sun icon
         icon.innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
+}
+
+// Notifications System
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        alert('Questo browser non supporta le notifiche desktop');
+        return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+        alert('Questo browser non supporta i Service Workers');
+        return;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            // Registra service worker se non già registrato
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Salva preferenza utente
+            localStorage.setItem('notificationsEnabled', 'true');
+            localStorage.setItem('notificationUser', currentUser.username);
+            
+            // Mostra notifica di conferma
+            showLocalNotification('Notifiche Attivate', 'Riceverai promemoria per inserire le ore lavorative');
+            
+            // Programma notifiche giornaliere
+            scheduleDailyNotifications();
+            
+            alert('Notifiche attivate con successo!');
+        } else {
+            alert('Permesso notifiche negato');
+        }
+    } catch (error) {
+        console.error('Errore richiesta permessi:', error);
+        alert('Errore nell\'attivazione delle notifiche');
+    }
+}
+
+function showLocalNotification(title, body) {
+    if (Notification.permission === 'granted') {
+        new Notification(title, {
+            body,
+            icon: '/ore_dipendenti/icon-192.png',
+            badge: '/ore_dipendenti/badge-72.png',
+            tag: 'ore-app'
+        });
+    }
+}
+
+function scheduleDailyNotifications() {
+    // Controlla se è l'ora di inviare la notifica (es: ogni giorno alle 18:00)
+    const checkNotification = () => {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        
+        // Notifica alle 18:00 se non sono state inserite ore oggi
+        if (hour === 18 && minute === 0) {
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const username = localStorage.getItem('notificationUser');
+            
+            if (username && DB.timeEntries[username]) {
+                const entry = DB.timeEntries[username][dateStr];
+                
+                // Se non ci sono entry per oggi, invia notifica
+                if (!entry) {
+                    showLocalNotification(
+                        'Promemoria Ore',
+                        'Non dimenticare di inserire le ore di oggi!'
+                    );
+                }
+            }
+        }
+    };
+    
+    // Controlla ogni minuto
+    setInterval(checkNotification, 60000);
+    
+    // Controlla subito
+    checkNotification();
+}
+
+// Inizializza notifiche se abilitate
+function initNotifications() {
+    const notificationsEnabled = localStorage.getItem('notificationsEnabled');
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    
+    if (notificationsBtn) {
+        notificationsBtn.style.display = 'inline-flex';
+        
+        if (notificationsEnabled === 'true' && Notification.permission === 'granted') {
+            scheduleDailyNotifications();
+            notificationsBtn.style.opacity = '0.5';
+            notificationsBtn.title = 'Notifiche Attive';
+        }
     }
 }
