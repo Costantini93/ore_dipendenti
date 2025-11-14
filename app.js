@@ -132,6 +132,7 @@ function saveDataToStorage() {
 function initLoginForm() {
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
+    const loginFooter = document.getElementById('loginFooter');
 
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -143,6 +144,8 @@ function initLoginForm() {
         if (!user) {
             loginError.textContent = 'Username non trovato';
             loginError.classList.add('show');
+            // Mostra il footer solo se l'utente non esiste (possibile primo accesso)
+            loginFooter.style.display = 'block';
             return;
         }
 
@@ -151,6 +154,7 @@ function initLoginForm() {
             currentUser = user;
             showFirstTimeModal();
             loginError.classList.remove('show');
+            loginFooter.style.display = 'none'; // Nascondi il footer
             return;
         }
 
@@ -162,9 +166,11 @@ function initLoginForm() {
             showPage('appPage');
             initializeApp();
             loginError.classList.remove('show');
+            loginFooter.style.display = 'none'; // Nascondi il footer
         } else {
             loginError.textContent = 'Password errata';
             loginError.classList.add('show');
+            loginFooter.style.display = 'none'; // Nascondi il footer se la password è errata
         }
     });
 

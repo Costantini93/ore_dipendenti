@@ -47,8 +47,8 @@
                     <button type="submit" class="btn btn-primary">Accedi</button>
                     <div id="loginError" class="error-message"></div>
                 </form>
-                <div class="login-footer">
-                    <p>Primo accesso? Usa nome_cognome (es: denise_raimondi)</p>
+                <div class="login-footer" id="loginFooter">
+                    <p>Inserisci il tuo username nel formato: <strong>nome_cognome</strong></p>
                 </div>
             </div>
         </div>
@@ -176,13 +176,20 @@
                 <h3>Benvenuto! Imposta la tua Password</h3>
             </div>
             <form id="firstTimeForm" class="time-form">
+                <div class="info-box" style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+                    <p style="margin: 0; font-size: 14px; color: #1976D2; line-height: 1.6;">
+                        <strong>📝 Primo accesso:</strong><br>
+                        Crea una password personale che userai per accedere all'app.<br>
+                        La password deve contenere almeno 4 caratteri.
+                    </p>
+                </div>
                 <div class="form-group">
                     <label for="newPassword">Nuova Password</label>
                     <input type="password" id="newPassword" name="newPassword" required minlength="4" placeholder="Minimo 4 caratteri">
                 </div>
                 <div class="form-group">
                     <label for="confirmPassword">Conferma Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="4">
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="4" placeholder="Ripeti la password">
                 </div>
                 <div id="passwordError" class="error-message"></div>
                 <div class="modal-actions">
