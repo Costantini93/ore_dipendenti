@@ -1,10 +1,12 @@
 const CACHE_NAME = 'ore-dipendenti-v2';
 const urlsToCache = [
-  '/ore_dipendenti/',
-  '/ore_dipendenti/index.html',
-  '/ore_dipendenti/styles.css',
-  '/ore_dipendenti/app.js',
-  '/ore_dipendenti/firebase-config.js'
+  '/',
+  '/index.html',
+  '/styles.css',
+  '/app.js',
+  '/firebase-config.js',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // Installazione del Service Worker
@@ -72,13 +74,13 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Promemoria Ore';
   const options = {
     body: data.body || 'Ricordati di inserire le tue ore!',
-    icon: '/ore_dipendenti/icon-192.png',
-    badge: '/ore_dipendenti/badge-72.png',
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
     vibrate: [200, 100, 200],
     tag: 'ore-reminder',
     requireInteraction: false,
     data: {
-      url: data.url || '/ore_dipendenti/'
+      url: data.url || '/'
     }
   };
 
@@ -89,7 +91,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data.url || '/ore_dipendenti/';
+  const urlToOpen = event.notification.data.url || '/';
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })

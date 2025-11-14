@@ -2,21 +2,21 @@
   "name": "Conteggio Ore Dipendenti",
   "short_name": "Ore Dipendenti",
   "description": "App per il tracciamento delle ore lavorative",
-  "start_url": "/ore_dipendenti/",
-  "scope": "/ore_dipendenti/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4CAF50",
+  "theme_color": "#6366f1",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/ore_dipendenti/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/ore_dipendenti/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

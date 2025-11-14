@@ -260,8 +260,8 @@ function initLoginForm() {
 
     firstTimeForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
+        const newPassword = document.getElementById('firstTimeNewPassword').value;
+        const confirmPassword = document.getElementById('firstTimeConfirmPassword').value;
 
         if (newPassword !== confirmPassword) {
             passwordError.textContent = 'Le password non coincidono';
@@ -417,18 +417,18 @@ function initApp() {
         }
 
         // Verifica password attuale
-        if (DB.users[currentUser].password !== currentPassword) {
+        if (DB.users[currentUser.username].password !== currentPassword) {
             alert('Password attuale errata');
             return;
         }
 
         // Aggiorna password in Firebase
         try {
-            await database.ref(`users/${currentUser}`).update({
+            await database.ref(`users/${currentUser.username}`).update({
                 password: newPassword
             });
 
-            DB.users[currentUser].password = newPassword;
+            DB.users[currentUser.username].password = newPassword;
             alert('Password cambiata con successo!');
             changePasswordModal.style.display = 'none';
             changePasswordForm.reset();

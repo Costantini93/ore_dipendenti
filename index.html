@@ -7,10 +7,13 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4CAF50">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ore Dipendenti">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -343,12 +346,12 @@
                     </p>
                 </div>
                 <div class="form-group">
-                    <label for="newPassword">Nuova Password</label>
-                    <input type="password" id="newPassword" name="newPassword" required minlength="4" placeholder="Minimo 4 caratteri">
+                    <label for="firstTimeNewPassword">Nuova Password</label>
+                    <input type="password" id="firstTimeNewPassword" name="firstTimeNewPassword" required minlength="4" placeholder="Minimo 4 caratteri">
                 </div>
                 <div class="form-group">
-                    <label for="confirmPassword">Conferma Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="4" placeholder="Ripeti la password">
+                    <label for="firstTimeConfirmPassword">Conferma Password</label>
+                    <input type="password" id="firstTimeConfirmPassword" name="firstTimeConfirmPassword" required minlength="4" placeholder="Ripeti la password">
                 </div>
                 <div id="passwordError" class="error-message"></div>
                 <div class="modal-actions">

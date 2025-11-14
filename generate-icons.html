@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genera Icone PNG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 { color: #333; }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+        #preview {
+            margin: 20px 0;
+        }
+        canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Genera Icone PNG</h1>
+        <p>Clicca sui pulsanti per scaricare le icone</p>
+        
+        <div id="preview"></div>
+        
+        <button onclick="downloadIcon(192)">📥 Scarica icon-192.png</button>
+        <button onclick="downloadIcon(512)">📥 Scarica icon-512.png</button>
+        
+        <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Le icone verranno scaricate automaticamente nella cartella Downloads
+        </p>
+    </div>
+
+    <script>
+        function createIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            const scale = size / 192;
+            
+            // Gradiente sfondo
+            const gradient = ctx.createLinearGradient(0, 0, 0, size);
+            gradient.addColorStop(0, '#1e40af');
+            gradient.addColorStop(1, '#0284c7');
+            
+            // Sfondo arrotondato
+            const cornerRadius = 42 * scale;
+            ctx.fillStyle = gradient;
+            roundRect(ctx, 0, 0, size, size, cornerRadius);
+            ctx.fill();
+            
+            // Calendario
+            ctx.fillStyle = 'white';
+            const calX = 36 * scale;
+            const calY = 50 * scale;
+            const calW = 120 * scale;
+            const calH = 100 * scale;
+            roundRect(ctx, calX, calY, calW, calH, 8 * scale);
+            ctx.fill();
+            
+            // Header calendario
+            ctx.fillStyle = '#1e40af';
+            roundRect(ctx, calX, calY, calW, 25 * scale, 8 * scale);
+            ctx.fill();
+            
+            // Buchi calendario
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(60 * scale, 45 * scale, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(132 * scale, 45 * scale, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Griglia calendario
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2 * scale;
+            
+            // Linee orizzontali
+            ctx.beginPath();
+            ctx.moveTo(56 * scale, 90 * scale);
+            ctx.lineTo(136 * scale, 90 * scale);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(56 * scale, 110 * scale);
+            ctx.lineTo(136 * scale, 110 * scale);
+            ctx.stroke();
+            
+            // Linee verticali
+            ctx.beginPath();
+            ctx.moveTo(76 * scale, 75 * scale);
+            ctx.lineTo(76 * scale, 140 * scale);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(96 * scale, 75 * scale);
+            ctx.lineTo(96 * scale, 140 * scale);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(116 * scale, 75 * scale);
+            ctx.lineTo(116 * scale, 140 * scale);
+            ctx.stroke();
+            
+            // Orologio verde
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(135 * scale, 135 * scale, 35 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Centro orologio bianco
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(135 * scale, 135 * scale, 28 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Lancette
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3 * scale;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(135 * scale, 135 * scale);
+            ctx.lineTo(135 * scale, 118 * scale);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(135 * scale, 135 * scale);
+            ctx.lineTo(147 * scale, 135 * scale);
+            ctx.stroke();
+            
+            // Centro lancette
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(135 * scale, 135 * scale, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            return canvas;
+        }
+        
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+        
+        function downloadIcon(size) {
+            const canvas = createIcon(size);
+            const link = document.createElement('a');
+            link.download = `icon-${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            alert(`✅ icon-${size}.png scaricato!\n\nSpostalo nella cartella del progetto.`);
+        }
+        
+        // Mostra preview
+        window.onload = function() {
+            const preview = document.getElementById('preview');
+            const canvas192 = createIcon(192);
+            canvas192.style.width = '96px';
+            canvas192.style.height = '96px';
+            preview.appendChild(canvas192);
+        };
+    </script>
+</body>
+</html>

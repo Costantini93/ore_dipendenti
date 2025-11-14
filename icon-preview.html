@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anteprima Icone</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .option {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+        }
+        .option:hover {
+            transform: translateY(-10px);
+        }
+        .option h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .option p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .icon-display {
+            width: 192px;
+            height: 192px;
+            margin: 20px auto;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #4f46e5;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Scegli l'icona per la tua app</h1>
+    
+    <div class="container">
+        <!-- Opzione 1: Minimalista Gradiente -->
+        <div class="option">
+            <h2>Opzione 1</h2>
+            <p>Minimalista Gradiente</p>
+            <svg class="icon-display" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="192" height="192" rx="42" fill="url(#grad1)"/>
+                <circle cx="96" cy="96" r="65" fill="none" stroke="white" stroke-width="8"/>
+                <line x1="96" y1="96" x2="96" y2="50" stroke="white" stroke-width="8" stroke-linecap="round"/>
+                <line x1="96" y1="96" x2="130" y2="96" stroke="white" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="96" cy="96" r="8" fill="white"/>
+            </svg>
+            <button onclick="selectIcon(1)">Scegli questa</button>
+        </div>
+
+        <!-- Opzione 2: Bold & Colorful -->
+        <div class="option">
+            <h2>Opzione 2</h2>
+            <p>Bold & Colorful</p>
+            <svg class="icon-display" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+                    </linearGradient>
+                    <filter id="shadow">
+                        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+                    </filter>
+                </defs>
+                <circle cx="96" cy="96" r="88" fill="url(#grad2)" filter="url(#shadow)"/>
+                <text x="96" y="130" font-family="Arial Black, sans-serif" font-size="100" font-weight="900" fill="white" text-anchor="middle">H</text>
+                <circle cx="145" cy="60" r="18" fill="#10b981"/>
+                <path d="M145 54 L142 60 L148 60 Z" fill="white" transform="rotate(45 145 60)"/>
+            </svg>
+            <button onclick="selectIcon(2)">Scegli questa</button>
+        </div>
+
+        <!-- Opzione 3: Icon Professionale -->
+        <div class="option">
+            <h2>Opzione 3</h2>
+            <p>Professionale</p>
+            <svg class="icon-display" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="192" height="192" rx="42" fill="url(#grad3)"/>
+                
+                <!-- Calendario -->
+                <rect x="36" y="50" width="120" height="100" rx="8" fill="white"/>
+                <rect x="36" y="50" width="120" height="25" rx="8" fill="#1e40af"/>
+                <circle cx="60" cy="45" r="4" fill="#94a3b8"/>
+                <circle cx="132" cy="45" r="4" fill="#94a3b8"/>
+                
+                <!-- Griglia calendario -->
+                <line x1="56" y1="90" x2="136" y2="90" stroke="#e5e7eb" stroke-width="2"/>
+                <line x1="56" y1="110" x2="136" y2="110" stroke="#e5e7eb" stroke-width="2"/>
+                <line x1="76" y1="75" x2="76" y2="140" stroke="#e5e7eb" stroke-width="2"/>
+                <line x1="96" y1="75" x2="96" y2="140" stroke="#e5e7eb" stroke-width="2"/>
+                <line x1="116" y1="75" x2="116" y2="140" stroke="#e5e7eb" stroke-width="2"/>
+                
+                <!-- Orologio -->
+                <circle cx="135" cy="135" r="35" fill="#10b981"/>
+                <circle cx="135" cy="135" r="28" fill="white"/>
+                <line x1="135" y1="135" x2="135" y2="118" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+                <line x1="135" y1="135" x2="147" y2="135" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <button onclick="selectIcon(3)">Scegli questa</button>
+        </div>
+    </div>
+
+    <script>
+        function selectIcon(num) {
+            alert('Hai scelto l\'Opzione ' + num + '!\n\nChiudi questa finestra e digita il numero nella chat.');
+        }
+    </script>
+</body>
+</html>
