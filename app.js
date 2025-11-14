@@ -311,6 +311,8 @@ function closeFirstTimeModal() {
 
 // Inizializza l'app principale
 function initApp() {
+    console.log('🚀 initApp() chiamato');
+    
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
         currentUser = null;
