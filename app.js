@@ -352,6 +352,8 @@ function initApp() {
             document.getElementById('editUserId').value = '';
             userForm.reset();
             document.getElementById('userUsername').disabled = false;
+            document.getElementById('userPassword').required = true;
+            document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
         });
     }
@@ -585,6 +587,7 @@ async function editUser(username) {
     document.getElementById('userUsername').value = username;
     document.getElementById('userUsername').disabled = true;
     document.getElementById('userPassword').value = '';
+    document.getElementById('userPassword').disabled = false;
     document.getElementById('userPassword').required = false;
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
@@ -602,7 +605,9 @@ async function editUser(username) {
     if (rolOre < 8) rolOre = 120;
     
     document.getElementById('userFerie').value = ferieOre;
+    document.getElementById('userFerie').disabled = false;
     document.getElementById('userRol').value = rolOre;
+    document.getElementById('userRol').disabled = false;
     document.getElementById('userModal').style.display = 'flex';
 }
 
