@@ -888,58 +888,112 @@ function exportToExcel() {
     }
 }
 
-function exportTableViewToExcel(month) {
+async function exportTableViewToExcel(month) {
     // Include admin + employees
     const allUsers = Object.keys(DB.users);
     const year = currentDate.getFullYear();
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     
-    // Prepara dati per Excel (TRASPOSTO: giorni in righe, dipendenti in colonne)
-    const data = [];
+    // Crea workbook con ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Resoconto');
     
-    // Header row con nomi dipendenti
+    // Header row
     const headerRow = ['Giorno'];
     allUsers.forEach(username => {
         headerRow.push(DB.users[username].name);
     });
-    data.push(headerRow);
+    const header = worksheet.addRow(headerRow);
     
-    // Riga per ogni giorno del mese
+    // Stile header - grigio
+    header.eachCell((cell) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD3D3D3' }
+        };
+        cell.font = { bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    
+    // Righe giorni
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const date = new Date(year, monthIndex, day);
         const dayName = date.toLocaleDateString('it-IT', { weekday: 'short' });
         
-        const row = [`${dayName} ${day}`]; // Prima colonna: "lun 1", "mar 2", etc.
+        const rowData = [`${dayName} ${day}`];
         
-        // Colonna per ogni dipendente
         allUsers.forEach(username => {
             const entry = DB.timeEntries[username]?.[dateStr];
             
             if (entry) {
                 if (entry.type === 'work' && entry.hours) {
-                    row.push(`${entry.hours.toFixed(1)}h (${entry.startTime}-${entry.endTime})`);
+                    rowData.push(`${entry.hours.toFixed(1)}h (${entry.startTime}-${entry.endTime})`);
                 } else if (entry.type === 'ferie') {
-                    row.push('F');
+                    rowData.push('FERIE');
                 } else if (entry.type === 'rol') {
-                    row.push('R');
+                    rowData.push('ROL');
                 } else if (entry.type === 'off') {
-                    row.push('OFF');
+                    rowData.push('OFF');
                 }
             } else {
-                row.push('');
+                rowData.push('');
             }
         });
         
-        data.push(row);
+        const row = worksheet.addRow(rowData);
+        
+        // Stile prima colonna (giorni) - grigio
+        row.getCell(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD3D3D3' }
+        };
+        row.getCell(1).font = { bold: true };
+        row.getCell(1).alignment = { horizontal: 'center' };
+        
+        // Stile celle dati
+        for (let col = 2; col <= allUsers.length + 1; col++) {
+            const cell = row.getCell(col);
+            const value = cell.value?.toString().toUpperCase() || '';
+            
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            
+            if (value === 'FERIE') {
+                // Giallo
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFFF00' }
+                };
+                cell.font = { bold: true };
+            } else if (value === 'ROL') {
+                // Verde chiaro
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF90EE90' }
+                };
+                cell.font = { bold: true };
+            } else if (value === 'OFF') {
+                // Rosso
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFF6B6B' }
+                };
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            }
+        }
     }
     
     // Riga vuota
-    data.push([]);
+    worksheet.addRow([]);
     
     // Riga TOTALE ORE
-    const totalRow = ['TOT ORE'];
+    const totalData = ['TOT ORE'];
     allUsers.forEach(username => {
         let totalHours = 0;
         for (let day = 1; day <= daysInMonth; day++) {
@@ -949,156 +1003,127 @@ function exportTableViewToExcel(month) {
                 totalHours += entry.hours;
             }
         }
-        totalRow.push(totalHours.toFixed(1));
+        totalData.push(totalHours.toFixed(1));
     });
-    data.push(totalRow);
+    const totalRow = worksheet.addRow(totalData);
+    totalRow.eachCell((cell, colNum) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colNum === 1 ? 'FF808080' : 'FFD3D3D3' }
+        };
+        cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
+        cell.alignment = { horizontal: 'center' };
+    });
     
     // Riga FERIE
-    const ferieRow = ['FERIE'];
+    const ferieData = ['FERIE'];
     allUsers.forEach(username => {
         let ferieDays = 0;
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const entry = DB.timeEntries[username]?.[dateStr];
-            if (entry && entry.type === 'ferie') {
-                ferieDays++;
-            }
+            if (entry && entry.type === 'ferie') ferieDays++;
         }
-        ferieRow.push(ferieDays);
+        ferieData.push(ferieDays);
     });
-    data.push(ferieRow);
+    const ferieRow = worksheet.addRow(ferieData);
+    ferieRow.eachCell((cell, colNum) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colNum === 1 ? 'FF808080' : 'FFD3D3D3' }
+        };
+        cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
+        cell.alignment = { horizontal: 'center' };
+    });
     
     // Riga ROL
-    const rolRow = ['ROL'];
+    const rolData = ['ROL'];
     allUsers.forEach(username => {
         let rolDays = 0;
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const entry = DB.timeEntries[username]?.[dateStr];
-            if (entry && entry.type === 'rol') {
-                rolDays++;
-            }
+            if (entry && entry.type === 'rol') rolDays++;
         }
-        rolRow.push(rolDays);
+        rolData.push(rolDays);
     });
-    data.push(rolRow);
-    
-    // Crea workbook e worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    
-    // Stile celle (larghezze colonne)
-    const colWidths = [{ wch: 12 }]; // Colonna giorno
-    allUsers.forEach(() => {
-        colWidths.push({ wch: 20 }); // Colonne dipendenti
+    const rolRow = worksheet.addRow(rolData);
+    rolRow.eachCell((cell, colNum) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colNum === 1 ? 'FF808080' : 'FFD3D3D3' }
+        };
+        cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
+        cell.alignment = { horizontal: 'center' };
     });
-    ws['!cols'] = colWidths;
     
-    // Applica stili alle celle
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    
-    // Stile header (prima riga) - grigio
-    for (let C = range.s.c; C <= range.e.c; C++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
-        if (!ws[cellAddress]) continue;
-        ws[cellAddress].s = {
-            fill: { fgColor: { rgb: "D3D3D3" } },
-            font: { bold: true, color: { rgb: "000000" } },
-            alignment: { horizontal: "center", vertical: "center" }
-        };
+    // Larghezza colonne
+    worksheet.getColumn(1).width = 12;
+    for (let col = 2; col <= allUsers.length + 1; col++) {
+        worksheet.getColumn(col).width = 22;
     }
     
-    // Stile colonna giorni (prima colonna) - grigio
-    for (let R = 1; R <= daysInMonth; R++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: 0 });
-        if (!ws[cellAddress]) continue;
-        ws[cellAddress].s = {
-            fill: { fgColor: { rgb: "D3D3D3" } },
-            font: { bold: true },
-            alignment: { horizontal: "center" }
-        };
-    }
-    
-    // Stile celle dati (giorni lavorati, ferie, rol, off)
-    for (let R = 1; R <= daysInMonth; R++) {
-        for (let C = 1; C <= allUsers.length; C++) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            if (!ws[cellAddress] || !ws[cellAddress].v) continue;
-            
-            const cellValue = ws[cellAddress].v.toString().toUpperCase();
-            
-            if (cellValue === 'F' || cellValue.includes('FERIE')) {
-                // Ferie - cella gialla
-                ws[cellAddress] = {
-                    v: 'FERIE',
-                    t: 's',
-                    s: {
-                        fill: { fgColor: { rgb: "FFFF00" } },
-                        font: { bold: true, color: { rgb: "000000" } },
-                        alignment: { horizontal: "center", vertical: "center" }
-                    }
-                };
-            } else if (cellValue === 'R' || cellValue.includes('ROL')) {
-                // ROL - cella verde
-                ws[cellAddress] = {
-                    v: 'ROL',
-                    t: 's',
-                    s: {
-                        fill: { fgColor: { rgb: "90EE90" } },
-                        font: { bold: true, color: { rgb: "000000" } },
-                        alignment: { horizontal: "center", vertical: "center" }
-                    }
-                };
-            } else if (cellValue === 'OFF') {
-                // OFF - cella rossa
-                ws[cellAddress].s = {
-                    fill: { fgColor: { rgb: "FF6B6B" } },
-                    font: { bold: true, color: { rgb: "FFFFFF" } },
-                    alignment: { horizontal: "center", vertical: "center" }
-                };
-            } else {
-                // Ore lavorate - cella bianca
-                ws[cellAddress].s = {
-                    alignment: { horizontal: "center", vertical: "center" }
-                };
-            }
-        }
-    }
-    
-    // Stile righe totali (TOT ORE, FERIE, ROL) - grigio scuro
-    const totalRowStart = daysInMonth + 2; // +1 per header, +1 per riga vuota
-    for (let R = totalRowStart; R <= totalRowStart + 2; R++) {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            if (!ws[cellAddress]) continue;
-            ws[cellAddress].s = {
-                fill: { fgColor: { rgb: C === 0 ? "808080" : "D3D3D3" } },
-                font: { bold: true, color: { rgb: C === 0 ? "FFFFFF" : "000000" } },
-                alignment: { horizontal: "center", vertical: "center" }
-            };
-        }
-    }
-    
-    XLSX.utils.book_append_sheet(wb, ws, 'Resoconto');
-    XLSX.writeFile(wb, `Resoconto_${month.replace(' ', '_')}.xlsx`, { cellStyles: true });
+    // Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Resoconto_${month.replace(' ', '_')}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
 }
 
-function exportCalendarToExcel(username, month) {
+async function exportCalendarToExcel(username, month) {
     const user = DB.users[username];
     const year = currentDate.getFullYear();
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     
-    const data = [];
-    data.push([`Resoconto Ore - ${user.name}`, '', '', '']);
-    data.push([`Mese: ${month}`, '', '', '']);
-    data.push([]); // Riga vuota
-    data.push(['Data', 'Tipo', 'Orario', 'Ore']);
+    // Create workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(user.name.split(' ')[0]);
+    
+    // Column widths
+    worksheet.columns = [
+        { width: 15 },
+        { width: 15 },
+        { width: 15 },
+        { width: 10 }
+    ];
+    
+    // Title row
+    const titleRow = worksheet.addRow([`Resoconto Ore - ${user.name}`, '', '', '']);
+    titleRow.font = { bold: true, size: 14 };
+    titleRow.alignment = { horizontal: 'left' };
+    
+    // Month row
+    const monthRow = worksheet.addRow([`Mese: ${month}`, '', '', '']);
+    monthRow.font = { bold: true };
+    
+    // Empty row
+    worksheet.addRow([]);
+    
+    // Header row
+    const headerRow = worksheet.addRow(['Data', 'Tipo', 'Orario', 'Ore']);
+    headerRow.eachCell((cell) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD3D3D3' }
+        };
+        cell.font = { bold: true };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
     
     let totalHours = 0;
     let ferieDays = 0;
     let rolDays = 0;
     
+    // Data rows
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const entry = DB.timeEntries[username]?.[dateStr];
@@ -1107,34 +1132,105 @@ function exportCalendarToExcel(username, month) {
         const dateFormatted = `${dayName} ${day}`;
         
         if (entry) {
+            let row;
             if (entry.type === 'work' && entry.hours) {
                 const orario = `${entry.startTime} - ${entry.endTime}`;
-                data.push([dateFormatted, 'Lavoro', orario, entry.hours.toFixed(1)]);
+                row = worksheet.addRow([dateFormatted, 'Lavoro', orario, entry.hours.toFixed(1)]);
                 totalHours += entry.hours;
+                row.alignment = { horizontal: 'center', vertical: 'middle' };
             } else if (entry.type === 'ferie') {
-                data.push([dateFormatted, 'Ferie', '-', '-']);
+                row = worksheet.addRow([dateFormatted, 'FERIE', '-', '-']);
                 ferieDays++;
+                row.getCell(2).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFFF00' }
+                };
+                row.getCell(2).font = { bold: true };
+                row.alignment = { horizontal: 'center', vertical: 'middle' };
             } else if (entry.type === 'rol') {
-                data.push([dateFormatted, 'ROL', '-', '-']);
+                row = worksheet.addRow([dateFormatted, 'ROL', '-', '-']);
                 rolDays++;
+                row.getCell(2).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF90EE90' }
+                };
+                row.getCell(2).font = { bold: true };
+                row.alignment = { horizontal: 'center', vertical: 'middle' };
             } else if (entry.type === 'off') {
-                data.push([dateFormatted, 'OFF', '-', '-']);
+                row = worksheet.addRow([dateFormatted, 'OFF', '-', '-']);
+                row.getCell(2).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFF6B6B' }
+                };
+                row.getCell(2).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                row.alignment = { horizontal: 'center', vertical: 'middle' };
             }
         }
     }
     
-    data.push([]); // Riga vuota
-    data.push(['TOTALE ORE', '', '', totalHours.toFixed(1)]);
-    data.push(['Giorni Ferie', '', '', ferieDays]);
-    data.push(['Giorni ROL', '', '', rolDays]);
+    // Empty row
+    worksheet.addRow([]);
     
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(data);
+    // Total rows
+    const totalRow = worksheet.addRow(['TOTALE ORE', '', '', totalHours.toFixed(1)]);
+    totalRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF808080' }
+    };
+    totalRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    totalRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD3D3D3' }
+    };
+    totalRow.getCell(4).font = { bold: true };
+    totalRow.alignment = { horizontal: 'center', vertical: 'middle' };
     
-    ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
+    const ferieRow = worksheet.addRow(['Giorni Ferie', '', '', ferieDays]);
+    ferieRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF808080' }
+    };
+    ferieRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ferieRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFFF00' }
+    };
+    ferieRow.getCell(4).font = { bold: true };
+    ferieRow.alignment = { horizontal: 'center', vertical: 'middle' };
     
-    XLSX.utils.book_append_sheet(wb, ws, user.name.split(' ')[0]);
-    XLSX.writeFile(wb, `Ore_${user.name.replace(' ', '_')}_${month.replace(' ', '_')}.xlsx`);
+    const rolRow = worksheet.addRow(['Giorni ROL', '', '', rolDays]);
+    rolRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF808080' }
+    };
+    rolRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    rolRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF90EE90' }
+    };
+    rolRow.getCell(4).font = { bold: true };
+    rolRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // Generate Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Ore_${user.name.replace(' ', '_')}_${month.replace(' ', '_')}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
 }
 
 // Dark Mode Toggle
