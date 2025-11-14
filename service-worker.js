@@ -1,10 +1,10 @@
-const CACHE_NAME = 'ore-dipendenti-v1';
+const CACHE_NAME = 'ore-dipendenti-v2';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/firebase-config.js'
+  '/ore_dipendenti/',
+  '/ore_dipendenti/index.html',
+  '/ore_dipendenti/styles.css',
+  '/ore_dipendenti/app.js',
+  '/ore_dipendenti/firebase-config.js'
 ];
 
 // Installazione del Service Worker

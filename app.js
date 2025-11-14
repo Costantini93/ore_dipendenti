@@ -778,7 +778,7 @@ function renderEmployeeTable() {
 // Registra Service Worker per PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/ore_dipendenti/service-worker.js')
             .then((registration) => {
                 console.log('✅ Service Worker registrato:', registration.scope);
             })
