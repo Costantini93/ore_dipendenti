@@ -915,6 +915,12 @@ async function exportTableViewToExcel(month) {
         };
         cell.font = { bold: true };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
     });
     
     // Righe giorni
@@ -953,6 +959,12 @@ async function exportTableViewToExcel(month) {
         };
         row.getCell(1).font = { bold: true };
         row.getCell(1).alignment = { horizontal: 'center' };
+        row.getCell(1).border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
         
         // Stile celle dati
         for (let col = 2; col <= allUsers.length + 1; col++) {
@@ -960,6 +972,12 @@ async function exportTableViewToExcel(month) {
             const value = cell.value?.toString().toUpperCase() || '';
             
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
             
             if (value === 'FERIE') {
                 // Giallo
@@ -1014,6 +1032,12 @@ async function exportTableViewToExcel(month) {
         };
         cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
         cell.alignment = { horizontal: 'center' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
     });
     
     // Riga FERIE
@@ -1036,6 +1060,12 @@ async function exportTableViewToExcel(month) {
         };
         cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
         cell.alignment = { horizontal: 'center' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
     });
     
     // Riga ROL
@@ -1058,6 +1088,12 @@ async function exportTableViewToExcel(month) {
         };
         cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
         cell.alignment = { horizontal: 'center' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
     });
     
     // Larghezza colonne
@@ -1117,6 +1153,12 @@ async function exportCalendarToExcel(username, month) {
         };
         cell.font = { bold: true };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
     });
     
     let totalHours = 0;
@@ -1138,6 +1180,14 @@ async function exportCalendarToExcel(username, month) {
                 row = worksheet.addRow([dateFormatted, 'Lavoro', orario, entry.hours.toFixed(1)]);
                 totalHours += entry.hours;
                 row.alignment = { horizontal: 'center', vertical: 'middle' };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
             } else if (entry.type === 'ferie') {
                 row = worksheet.addRow([dateFormatted, 'FERIE', '-', '-']);
                 ferieDays++;
@@ -1148,6 +1198,14 @@ async function exportCalendarToExcel(username, month) {
                 };
                 row.getCell(2).font = { bold: true };
                 row.alignment = { horizontal: 'center', vertical: 'middle' };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
             } else if (entry.type === 'rol') {
                 row = worksheet.addRow([dateFormatted, 'ROL', '-', '-']);
                 rolDays++;
@@ -1158,6 +1216,14 @@ async function exportCalendarToExcel(username, month) {
                 };
                 row.getCell(2).font = { bold: true };
                 row.alignment = { horizontal: 'center', vertical: 'middle' };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
             } else if (entry.type === 'off') {
                 row = worksheet.addRow([dateFormatted, 'OFF', '-', '-']);
                 row.getCell(2).fill = {
@@ -1167,6 +1233,14 @@ async function exportCalendarToExcel(username, month) {
                 };
                 row.getCell(2).font = { bold: true, color: { argb: 'FFFFFFFF' } };
                 row.alignment = { horizontal: 'center', vertical: 'middle' };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
             }
         }
     }
@@ -1189,6 +1263,14 @@ async function exportCalendarToExcel(username, month) {
     };
     totalRow.getCell(4).font = { bold: true };
     totalRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    totalRow.eachCell((cell) => {
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+    });
     
     const ferieRow = worksheet.addRow(['Giorni Ferie', '', '', ferieDays]);
     ferieRow.getCell(1).fill = {
@@ -1204,8 +1286,37 @@ async function exportCalendarToExcel(username, month) {
     };
     ferieRow.getCell(4).font = { bold: true };
     ferieRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    ferieRow.eachCell((cell) => {
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+    });
     
     const rolRow = worksheet.addRow(['Giorni ROL', '', '', rolDays]);
+    rolRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF808080' }
+    };
+    rolRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    rolRow.getCell(4).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF90EE90' }
+    };
+    rolRow.getCell(4).font = { bold: true };
+    rolRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    rolRow.eachCell((cell) => {
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+    });
     rolRow.getCell(1).fill = {
         type: 'pattern',
         pattern: 'solid',
