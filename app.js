@@ -22,8 +22,8 @@ const DB = {
             password: null,
             name: 'Sandy Oduro',
             role: 'employee',
-            ferieResidue: 208,
-            rolResidui: 120
+            ferieResidue: 0,
+            rolResidui: 0
         },
         'luca_avesani': {
             username: 'luca_avesani',
@@ -160,9 +160,13 @@ function saveDataToStorage() {
 
 // Controllo e aggiunta ore mensili ferie
 async function checkAndAddMonthlyLeave() {
-    const usersWithMonthlyLeave = ['alessandrocostantini', 'lucaavesani', 'deniseraimondi'];
-    const monthlyFerieHours = 14.3;  // 172 ore annue / 12 mesi
-    const monthlyRolHours = 11.3;     // 136 ore annue / 12 mesi (include ex festività)
+    // Definisci gli utenti e le loro ore mensili
+    const usersMonthlyHours = {
+        'alessandrocostantini': { ferie: 14.3, rol: 11.3 },  // 172h/anno ferie, 136h/anno ROL
+        'lucaavesani': { ferie: 14.3, rol: 11.3 },
+        'deniseraimondi': { ferie: 14.3, rol: 11.3 },
+        'sandy_oduro': { ferie: 10.75, rol: 6.5 }  // 129h/anno ferie, 78h/anno ROL
+    };
     
     try {
         // Ottieni l'ultimo mese processato
@@ -176,8 +180,11 @@ async function checkAndAddMonthlyLeave() {
         if (lastProcessed !== currentMonthKey) {
             console.log('🔄 Aggiunta ore mensili ferie e ROL...');
             
-            for (const username of usersWithMonthlyLeave) {
+            for (const username in usersMonthlyHours) {
                 if (DB.users[username]) {
+                    const monthlyFerieHours = usersMonthlyHours[username].ferie;
+                    const monthlyRolHours = usersMonthlyHours[username].rol;
+                    
                     const currentFerie = DB.users[username].ferieResidue || 0;
                     const newFerie = currentFerie + monthlyFerieHours;
                     
