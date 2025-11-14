@@ -532,6 +532,7 @@ function initApp() {
                 // Aggiorna lista utenti se admin
                 if (currentUser.role === 'admin') {
                     renderUsersList();
+                    populateUserSelect(); // Aggiorna anche il menu a tendina
                 }
 
                 alert(editUserId ? 'Utente aggiornato con successo!' : 'Utente creato con successo!');
@@ -620,6 +621,7 @@ function initializeApp() {
         document.getElementById('exportExcelBtn').style.display = 'inline-flex';
         document.getElementById('usersManagementBtn').style.display = 'inline-flex';
         renderUsersList();
+        populateUserSelect(); // Popola il menu a tendina
         // Admin parte visualizzando se stesso
         selectedUser = currentUser.username;
         document.getElementById('userSelect').value = currentUser.username;
@@ -697,6 +699,27 @@ function renderUsersList() {
     });
 }
 
+// Popola il menu a tendina per la selezione utente
+function populateUserSelect() {
+    const userSelect = document.getElementById('userSelect');
+    if (!userSelect) return;
+    
+    userSelect.innerHTML = '';
+    
+    Object.keys(DB.users).forEach(username => {
+        const user = DB.users[username];
+        const option = document.createElement('option');
+        option.value = username;
+        option.textContent = user.name + (username === currentUser.username ? ' (Tu)' : '');
+        userSelect.appendChild(option);
+    });
+    
+    // Seleziona l'utente corrente se esiste
+    if (selectedUser && DB.users[selectedUser]) {
+        userSelect.value = selectedUser;
+    }
+}
+
 // Edit user
 async function editUser(username) {
     const user = DB.users[username];
@@ -736,12 +759,21 @@ async function deleteUser(username) {
         delete DB.users[username];
         delete DB.timeEntries[username];
         
+        // Se l'utente eliminato era quello selezionato, torna all'utente corrente
+        if (selectedUser === username) {
+            selectedUser = currentUser.username;
+        }
+        
         populateUserSelect();
         renderUsersList();
+        updateLeaveBalance();
+        renderCalendar();
+        updateMonthlySummary();
+        
         alert('Utente eliminato con successo!');
     } catch (error) {
         console.error('Errore eliminazione utente:', error);
-        alert('Errore durante l\'eliminazione');
+        alert('Errore durante l\'eliminazione: ' + error.message);
     }
 }
 
