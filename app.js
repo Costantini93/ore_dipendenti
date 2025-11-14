@@ -460,6 +460,12 @@ function initApp() {
             document.getElementById('userModalTitle').textContent = 'Aggiungi Utente';
             document.getElementById('editUserId').value = '';
             userForm.reset();
+            
+            // Imposta valori di default
+            document.getElementById('userPassword').value = '1234';
+            document.getElementById('userFerie').value = '0';
+            document.getElementById('userRol').value = '0';
+            
             const usernameInput = document.getElementById('userUsername');
             usernameInput.disabled = false;
             usernameInput.readOnly = false;
