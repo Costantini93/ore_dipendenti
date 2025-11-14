@@ -67,6 +67,11 @@
                     <h2>Gestione Ore</h2>
                 </div>
                 <div class="navbar-right">
+                    <button id="darkModeToggle" class="btn btn-icon" title="Toggle Dark Mode">
+                        <svg id="darkModeIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                     <span id="userDisplay" class="user-display"></span>
                     <button id="logoutBtn" class="btn btn-secondary">Esci</button>
                 </div>
@@ -99,11 +104,20 @@
                         </svg>
                     </button>
                     <h2 id="currentMonth"></h2>
-                    <button id="nextMonth" class="btn btn-icon">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" fill="currentColor"/>
-                        </svg>
-                    </button>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="exportExcelBtn" class="btn btn-success" style="display: none;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 5px;">
+                                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="currentColor"/>
+                                <path d="M8 15.5l1.5 2L12 14l2.5 3.5L16 15" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            Esporta Excel
+                        </button>
+                        <button id="nextMonth" class="btn btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Admin User Selection -->
@@ -117,6 +131,24 @@
                         <option value="sophie_rizzin">Sophie Rizzin</option>
                         <option value="sofia_bilianska">Sofia Bilianska</option>
                     </select>
+                </div>
+
+                <!-- Ferie/ROL Residui -->
+                <div id="leaveBalance" class="leave-balance" style="display: none;">
+                    <div class="balance-card">
+                        <div class="balance-icon">🏖️</div>
+                        <div class="balance-content">
+                            <div class="balance-label">Ferie Residue</div>
+                            <div class="balance-value" id="ferieResidue">26</div>
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-icon">📅</div>
+                        <div class="balance-content">
+                            <div class="balance-label">ROL Residui</div>
+                            <div class="balance-value" id="rolResidui">15</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Monthly Summary -->
@@ -258,6 +290,8 @@
         </div>
     </div>
 
+    <!-- SheetJS library for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
 </body>

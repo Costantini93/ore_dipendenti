@@ -5,37 +5,49 @@ const DB = {
             username: 'alessandro_costantini',
             password: null, // null = primo accesso
             name: 'Alessandro Costantini',
-            role: 'admin'
+            role: 'admin',
+            ferieResidue: 26, // Giorni ferie disponibili
+            rolResidui: 15    // Giorni ROL disponibili
         },
         'denise_raimondi': {
             username: 'denise_raimondi',
             password: null,
             name: 'Denise Raimondi',
-            role: 'employee'
+            role: 'employee',
+            ferieResidue: 26,
+            rolResidui: 15
         },
         'sandy_oduro': {
             username: 'sandy_oduro',
             password: null,
             name: 'Sandy Oduro',
-            role: 'employee'
+            role: 'employee',
+            ferieResidue: 26,
+            rolResidui: 15
         },
         'luca_avesani': {
             username: 'luca_avesani',
             password: null,
             name: 'Luca Avesani',
-            role: 'employee'
+            role: 'employee',
+            ferieResidue: 26,
+            rolResidui: 15
         },
         'sophie_rizzin': {
             username: 'sophie_rizzin',
             password: null,
             name: 'Sophie Rizzin',
-            role: 'employee'
+            role: 'employee',
+            ferieResidue: 26,
+            rolResidui: 15
         },
         'sofia_bilianska': {
             username: 'sofia_bilianska',
             password: null,
             name: 'Sofia Bilianska',
-            role: 'employee'
+            role: 'employee',
+            ferieResidue: 26,
+            rolResidui: 15
         }
     },
     timeEntries: {} // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -50,6 +62,13 @@ let currentView = 'calendar'; // 'calendar' o 'table'
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', async () => {
     await loadDataFromStorage();
+    
+    // Carica preferenza dark mode
+    const darkMode = localStorage.getItem('darkMode') === 'true';
+    if (darkMode) {
+        document.body.classList.add('dark-mode');
+        updateDarkModeIcon(true);
+    }
     
     // Controlla se c'è un utente salvato (auto-login)
     const savedUsername = localStorage.getItem('loggedUser');
@@ -66,15 +85,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Carica dati da Firebase
 async function loadDataFromStorage() {
-    // Carica password da Firebase
+    // Carica password e contatori ferie/ROL da Firebase
     if (typeof firebase !== 'undefined') {
         try {
             const snapshot = await dbRef.users.once('value');
             const data = snapshot.val();
             if (data) {
                 Object.keys(data).forEach(username => {
-                    if (DB.users[username] && data[username].password !== undefined) {
-                        DB.users[username].password = data[username].password;
+                    if (DB.users[username]) {
+                        if (data[username].password !== undefined) {
+                            DB.users[username].password = data[username].password;
+                        }
+                        if (data[username].ferieResidue !== undefined) {
+                            DB.users[username].ferieResidue = data[username].ferieResidue;
+                        }
+                        if (data[username].rolResidui !== undefined) {
+                            DB.users[username].rolResidui = data[username].rolResidui;
+                        }
                     }
                 });
             }
@@ -102,12 +129,14 @@ async function loadDataFromStorage() {
 
 // Salva dati in Firebase
 function saveDataToStorage() {
-    // Salva password su Firebase
+    // Salva password e contatori ferie/ROL su Firebase
     if (typeof firebase !== 'undefined' && dbRef) {
         const usersToSave = {};
         Object.keys(DB.users).forEach(username => {
             usersToSave[username] = {
-                password: DB.users[username].password
+                password: DB.users[username].password,
+                ferieResidue: DB.users[username].ferieResidue || 26,
+                rolResidui: DB.users[username].rolResidui || 15
             };
         });
         
@@ -261,9 +290,13 @@ function initApp() {
         updateMonthDisplay();
     });
 
+    // Dark Mode Toggle
+    document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+
     // Selezione utente per admin
     document.getElementById('userSelect').addEventListener('change', (e) => {
         selectedUser = e.target.value;
+        updateLeaveBalance(); // Aggiorna contatori quando cambia utente
         renderCalendar();
         updateMonthlySummary();
     });
@@ -276,6 +309,9 @@ function initApp() {
     document.getElementById('tableViewBtn').addEventListener('click', () => {
         switchView('table');
     });
+
+    // Export Excel
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
 
     // Modal
     document.getElementById('closeModal').addEventListener('click', closeModal);
@@ -296,6 +332,7 @@ function initializeApp() {
     if (currentUser.role === 'admin') {
         document.getElementById('adminUserSelection').style.display = 'flex';
         document.getElementById('viewToggle').style.display = 'flex';
+        document.getElementById('exportExcelBtn').style.display = 'inline-flex';
         // Admin parte visualizzando se stesso
         selectedUser = currentUser.username;
         document.getElementById('userSelect').value = currentUser.username;
@@ -304,7 +341,18 @@ function initializeApp() {
         document.getElementById('viewToggle').style.display = 'none';
     }
 
+    // Mostra balance ferie/ROL
+    document.getElementById('leaveBalance').style.display = 'flex';
+    updateLeaveBalance();
+
     switchView('calendar');
+}
+
+// Aggiorna balance ferie/ROL
+function updateLeaveBalance() {
+    const user = DB.users[selectedUser];
+    document.getElementById('ferieResidue').textContent = user.ferieResidue || 0;
+    document.getElementById('rolResidui').textContent = user.rolResidui || 0;
 }
 
 // Aggiorna display del mese
@@ -567,6 +615,9 @@ function saveTimeEntry() {
         DB.timeEntries[viewingUser] = {};
     }
 
+    // Controlla se c'era già un'entry (per gestire il cambio tipo)
+    const oldEntry = DB.timeEntries[viewingUser][dateStr];
+
     const entry = { type: dayType };
 
     if (dayType === 'work') {
@@ -590,11 +641,40 @@ function saveTimeEntry() {
         entry.hours = 0;
     }
 
+    // Gestione contatori ferie/ROL
+    const user = DB.users[viewingUser];
+    
+    // Ripristina giorni se cambia da ferie/ROL a altro tipo
+    if (oldEntry) {
+        if (oldEntry.type === 'ferie' && dayType !== 'ferie') {
+            user.ferieResidue = (user.ferieResidue || 0) + 1;
+        }
+        if (oldEntry.type === 'rol' && dayType !== 'rol') {
+            user.rolResidui = (user.rolResidui || 0) + 1;
+        }
+    }
+    
+    // Decrementa giorni se è ferie/ROL
+    if (dayType === 'ferie') {
+        if ((user.ferieResidue || 0) <= 0) {
+            alert('⚠️ Attenzione: hai esaurito i giorni di ferie disponibili!');
+        }
+        user.ferieResidue = Math.max(0, (user.ferieResidue || 0) - 1);
+    }
+    
+    if (dayType === 'rol') {
+        if ((user.rolResidui || 0) <= 0) {
+            alert('⚠️ Attenzione: hai esaurito i giorni di ROL disponibili!');
+        }
+        user.rolResidui = Math.max(0, (user.rolResidui || 0) - 1);
+    }
+
     DB.timeEntries[viewingUser][dateStr] = entry;
     
     // Salva e poi aggiorna l'interfaccia
     saveDataToStorage().then(() => {
         closeModal();
+        updateLeaveBalance(); // Aggiorna contatori
         
         // Aggiorna vista in base alla modalità corrente
         if (currentView === 'calendar') {
@@ -792,4 +872,158 @@ if ('serviceWorker' in navigator) {
                 console.log('❌ Errore registrazione Service Worker:', error);
             });
     });
+}
+
+// Export Excel
+function exportToExcel() {
+    const month = currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    const isAdmin = currentUser.role === 'admin';
+    
+    if (isAdmin && currentView === 'table') {
+        // Export tabella completa di tutti i dipendenti
+        exportTableViewToExcel(month);
+    } else {
+        // Export calendario singolo utente
+        exportCalendarToExcel(selectedUser, month);
+    }
+}
+
+function exportTableViewToExcel(month) {
+    const employees = Object.keys(DB.users).filter(u => DB.users[u].role === 'employee');
+    const year = currentDate.getFullYear();
+    const monthIndex = currentDate.getMonth();
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    
+    // Prepara dati per Excel
+    const data = [];
+    
+    // Header row
+    const headerRow = ['Dipendente'];
+    for (let day = 1; day <= daysInMonth; day++) {
+        headerRow.push(`${day}`);
+    }
+    headerRow.push('TOT ORE', 'FERIE', 'ROL');
+    data.push(headerRow);
+    
+    // Righe dipendenti
+    employees.forEach(username => {
+        const user = DB.users[username];
+        const row = [user.name];
+        
+        let totalHours = 0;
+        let ferieDays = 0;
+        let rolDays = 0;
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = DB.timeEntries[username]?.[dateStr];
+            
+            if (entry) {
+                if (entry.type === 'work' && entry.hours) {
+                    row.push(entry.hours.toFixed(1));
+                    totalHours += entry.hours;
+                } else if (entry.type === 'ferie') {
+                    row.push('F');
+                    ferieDays++;
+                } else if (entry.type === 'rol') {
+                    row.push('R');
+                    rolDays++;
+                } else if (entry.type === 'off') {
+                    row.push('OFF');
+                }
+            } else {
+                row.push('');
+            }
+        }
+        
+        row.push(totalHours.toFixed(1), ferieDays, rolDays);
+        data.push(row);
+    });
+    
+    // Crea workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    // Stile celle (larghezze colonne)
+    const colWidths = [{ wch: 20 }]; // Nome dipendente
+    for (let i = 1; i <= daysInMonth; i++) {
+        colWidths.push({ wch: 5 }); // Giorni
+    }
+    colWidths.push({ wch: 10 }, { wch: 8 }, { wch: 8 }); // Totali
+    ws['!cols'] = colWidths;
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Resoconto');
+    XLSX.writeFile(wb, `Resoconto_${month.replace(' ', '_')}.xlsx`);
+}
+
+function exportCalendarToExcel(username, month) {
+    const user = DB.users[username];
+    const year = currentDate.getFullYear();
+    const monthIndex = currentDate.getMonth();
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    
+    const data = [];
+    data.push([`Resoconto Ore - ${user.name}`, '', '']);
+    data.push([`Mese: ${month}`, '', '']);
+    data.push([]); // Riga vuota
+    data.push(['Data', 'Tipo', 'Ore']);
+    
+    let totalHours = 0;
+    let ferieDays = 0;
+    let rolDays = 0;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const entry = DB.timeEntries[username]?.[dateStr];
+        const date = new Date(year, monthIndex, day);
+        const dayName = date.toLocaleDateString('it-IT', { weekday: 'short' });
+        const dateFormatted = `${dayName} ${day}`;
+        
+        if (entry) {
+            if (entry.type === 'work' && entry.hours) {
+                data.push([dateFormatted, 'Lavoro', entry.hours.toFixed(1)]);
+                totalHours += entry.hours;
+            } else if (entry.type === 'ferie') {
+                data.push([dateFormatted, 'Ferie', '-']);
+                ferieDays++;
+            } else if (entry.type === 'rol') {
+                data.push([dateFormatted, 'ROL', '-']);
+                rolDays++;
+            } else if (entry.type === 'off') {
+                data.push([dateFormatted, 'OFF', '-']);
+            }
+        }
+    }
+    
+    data.push([]); // Riga vuota
+    data.push(['TOTALE ORE', '', totalHours.toFixed(1)]);
+    data.push(['Giorni Ferie', '', ferieDays]);
+    data.push(['Giorni ROL', '', rolDays]);
+    
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 10 }];
+    
+    XLSX.utils.book_append_sheet(wb, ws, user.name.split(' ')[0]);
+    XLSX.writeFile(wb, `Ore_${user.name.replace(' ', '_')}_${month.replace(' ', '_')}.xlsx`);
+}
+
+// Dark Mode Toggle
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    updateDarkModeIcon(isDark);
+}
+
+function updateDarkModeIcon(isDark) {
+    const icon = document.getElementById('darkModeIcon');
+    if (isDark) {
+        // Moon icon
+        icon.innerHTML = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor"/>';
+    } else {
+        // Sun icon
+        icon.innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
 }
