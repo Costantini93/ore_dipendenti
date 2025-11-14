@@ -895,64 +895,104 @@ function exportTableViewToExcel(month) {
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     
-    // Prepara dati per Excel
+    // Prepara dati per Excel (TRASPOSTO: giorni in righe, dipendenti in colonne)
     const data = [];
     
-    // Header row
-    const headerRow = ['Dipendente'];
-    for (let day = 1; day <= daysInMonth; day++) {
-        headerRow.push(`${day}`);
-    }
-    headerRow.push('TOT ORE', 'FERIE', 'ROL');
+    // Header row con nomi dipendenti
+    const headerRow = ['Giorno'];
+    allUsers.forEach(username => {
+        headerRow.push(DB.users[username].name);
+    });
     data.push(headerRow);
     
-    // Righe di tutti gli utenti (admin + dipendenti)
-    allUsers.forEach(username => {
-        const user = DB.users[username];
-        const row = [user.name];
+    // Riga per ogni giorno del mese
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const date = new Date(year, monthIndex, day);
+        const dayName = date.toLocaleDateString('it-IT', { weekday: 'short' });
         
-        let totalHours = 0;
-        let ferieDays = 0;
-        let rolDays = 0;
+        const row = [`${dayName} ${day}`]; // Prima colonna: "lun 1", "mar 2", etc.
         
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        // Colonna per ogni dipendente
+        allUsers.forEach(username => {
             const entry = DB.timeEntries[username]?.[dateStr];
             
             if (entry) {
                 if (entry.type === 'work' && entry.hours) {
-                    // Mostra ore con orari
-                    const cellValue = `${entry.hours.toFixed(1)}h (${entry.startTime}-${entry.endTime})`;
-                    row.push(cellValue);
-                    totalHours += entry.hours;
+                    row.push(`${entry.hours.toFixed(1)}h (${entry.startTime}-${entry.endTime})`);
                 } else if (entry.type === 'ferie') {
                     row.push('F');
-                    ferieDays++;
                 } else if (entry.type === 'rol') {
                     row.push('R');
-                    rolDays++;
                 } else if (entry.type === 'off') {
                     row.push('OFF');
                 }
             } else {
                 row.push('');
             }
-        }
+        });
         
-        row.push(totalHours.toFixed(1), ferieDays, rolDays);
         data.push(row);
+    }
+    
+    // Riga vuota
+    data.push([]);
+    
+    // Riga TOTALE ORE
+    const totalRow = ['TOT ORE'];
+    allUsers.forEach(username => {
+        let totalHours = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = DB.timeEntries[username]?.[dateStr];
+            if (entry && entry.type === 'work' && entry.hours) {
+                totalHours += entry.hours;
+            }
+        }
+        totalRow.push(totalHours.toFixed(1));
     });
+    data.push(totalRow);
+    
+    // Riga FERIE
+    const ferieRow = ['FERIE'];
+    allUsers.forEach(username => {
+        let ferieDays = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = DB.timeEntries[username]?.[dateStr];
+            if (entry && entry.type === 'ferie') {
+                ferieDays++;
+            }
+        }
+        ferieRow.push(ferieDays);
+    });
+    data.push(ferieRow);
+    
+    // Riga ROL
+    const rolRow = ['ROL'];
+    allUsers.forEach(username => {
+        let rolDays = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = DB.timeEntries[username]?.[dateStr];
+            if (entry && entry.type === 'rol') {
+                rolDays++;
+            }
+        }
+        rolRow.push(rolDays);
+    });
+    data.push(rolRow);
     
     // Crea workbook e worksheet
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
     
     // Stile celle (larghezze colonne)
-    const colWidths = [{ wch: 22 }]; // Nome dipendente
-    for (let i = 1; i <= daysInMonth; i++) {
-        colWidths.push({ wch: 18 }); // Giorni - larghezza maggiore per "8.5h (18:00-02:30)"
-    }
-    colWidths.push({ wch: 12 }, { wch: 10 }, { wch: 10 }); // Totali
+    const colWidths = [{ wch: 12 }]; // Colonna giorno
+    allUsers.forEach(() => {
+        colWidths.push({ wch: 20 }); // Colonne dipendenti
+    });
+    ws['!cols'] = colWidths;
     ws['!cols'] = colWidths;
     
     XLSX.utils.book_append_sheet(wb, ws, 'Resoconto');
