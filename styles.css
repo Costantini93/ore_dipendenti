@@ -15,6 +15,7 @@
     --danger-color: #ef4444;
     --bg-color: #f8fafc;
     --card-bg: #ffffff;
+    --bg-secondary: #f5f5f5;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --border-color: #e2e8f0;
@@ -29,6 +30,10 @@
 body.dark-mode {
     --bg-color: #0f172a;
     --card-bg: #1e293b;
+    --bg-secondary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
     --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
     --border-color: #334155;
@@ -1550,4 +1555,28 @@ body {
 .btn-icon-small svg {
     width: 18px;
     height: 18px;
+}
+
+/* Holidays Modal Styles */
+#holidayYearSelect {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#holidayYearSelect:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#holidaysList {
+    background: transparent;
+}
+
+body.dark-mode #holidayYearSelect {
+    background: var(--bg-secondary);
 }

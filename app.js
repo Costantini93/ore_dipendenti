@@ -62,6 +62,7 @@ let currentView = 'calendar'; // 'calendar' o 'table'
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', async () => {
     await loadDataFromStorage();
+    await checkAndAddMonthlyLeave();
     
     // Carica preferenza dark mode
     const darkMode = localStorage.getItem('darkMode') === 'true';
@@ -97,20 +98,10 @@ async function loadDataFromStorage() {
                             DB.users[username].password = data[username].password;
                         }
                         if (data[username].ferieResidue !== undefined) {
-                            let ferieValue = data[username].ferieResidue;
-                            // Converti da giorni a ore se il valore è < 100 (era in giorni)
-                            if (ferieValue < 100) {
-                                ferieValue = ferieValue * 8;
-                            }
-                            DB.users[username].ferieResidue = ferieValue;
+                            DB.users[username].ferieResidue = data[username].ferieResidue;
                         }
                         if (data[username].rolResidui !== undefined) {
-                            let rolValue = data[username].rolResidui;
-                            // Converti da giorni a ore se il valore è < 100 (era in giorni)
-                            if (rolValue < 100) {
-                                rolValue = rolValue * 8;
-                            }
-                            DB.users[username].rolResidui = rolValue;
+                            DB.users[username].rolResidui = data[username].rolResidui;
                         }
                     }
                 });
@@ -166,6 +157,56 @@ function saveDataToStorage() {
     
     return Promise.resolve();
 }
+
+// Controllo e aggiunta ore mensili ferie
+async function checkAndAddMonthlyLeave() {
+    const usersWithMonthlyLeave = ['alessandrocostantini', 'lucaavesani', 'deniseraimondi'];
+    const monthlyFerieHours = 17.36;
+    const monthlyRolHours = 8.67;
+    
+    try {
+        // Ottieni l'ultimo mese processato
+        const lastProcessedSnapshot = await database.ref('lastMonthlyLeaveUpdate').once('value');
+        const lastProcessed = lastProcessedSnapshot.val();
+        
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Se non è stato ancora processato questo mese
+        if (lastProcessed !== currentMonthKey) {
+            console.log('🔄 Aggiunta ore mensili ferie e ROL...');
+            
+            for (const username of usersWithMonthlyLeave) {
+                if (DB.users[username]) {
+                    const currentFerie = DB.users[username].ferieResidue || 0;
+                    const newFerie = currentFerie + monthlyFerieHours;
+                    
+                    const currentRol = DB.users[username].rolResidui || 0;
+                    const newRol = currentRol + monthlyRolHours;
+                    
+                    // Aggiorna Firebase
+                    await database.ref(`users/${username}`).update({
+                        ferieResidue: newFerie,
+                        rolResidui: newRol
+                    });
+                    
+                    // Aggiorna DB locale
+                    DB.users[username].ferieResidue = newFerie;
+                    DB.users[username].rolResidui = newRol;
+                    
+                    console.log(`✅ ${username}: Ferie +${monthlyFerieHours}h (${currentFerie} → ${newFerie}), ROL +${monthlyRolHours}h (${currentRol} → ${newRol})`);
+                }
+            }
+            
+            // Salva l'ultimo mese processato
+            await database.ref('lastMonthlyLeaveUpdate').set(currentMonthKey);
+            console.log('✅ Ore mensili aggiunte con successo!');
+        }
+    } catch (error) {
+        console.error('❌ Errore aggiunta ore mensili:', error);
+    }
+}
+
 
 // Login Form
 function initLoginForm() {
@@ -299,6 +340,64 @@ function initApp() {
         changePasswordModal.style.display = 'none';
     });
 
+    // Users Management Modal
+    const usersManagementBtn = document.getElementById('usersManagementBtn');
+    const adminUserManagement = document.getElementById('adminUserManagement');
+    const closeUsersModal = document.getElementById('closeUsersModal');
+
+    if (usersManagementBtn) {
+        usersManagementBtn.addEventListener('click', () => {
+            adminUserManagement.style.display = 'flex';
+        });
+    }
+
+    if (closeUsersModal) {
+        closeUsersModal.addEventListener('click', () => {
+            adminUserManagement.style.display = 'none';
+        });
+    }
+
+    // Chiudi modal cliccando fuori
+    window.addEventListener('click', (e) => {
+        if (e.target === adminUserManagement) {
+            adminUserManagement.style.display = 'none';
+        }
+    });
+
+    // Holidays Modal
+    const holidaysBtn = document.getElementById('holidaysBtn');
+    const holidaysModal = document.getElementById('holidaysModal');
+    const closeHolidaysModal = document.getElementById('closeHolidaysModal');
+    const holidayYearSelect = document.getElementById('holidayYearSelect');
+
+    if (holidaysBtn) {
+        holidaysBtn.addEventListener('click', () => {
+            const currentYear = new Date().getFullYear();
+            holidayYearSelect.value = currentYear;
+            renderHolidaysList(currentYear);
+            holidaysModal.style.display = 'flex';
+        });
+    }
+
+    if (closeHolidaysModal) {
+        closeHolidaysModal.addEventListener('click', () => {
+            holidaysModal.style.display = 'none';
+        });
+    }
+
+    if (holidayYearSelect) {
+        holidayYearSelect.addEventListener('change', (e) => {
+            renderHolidaysList(parseInt(e.target.value));
+        });
+    }
+
+    // Chiudi holidays modal cliccando fuori
+    window.addEventListener('click', (e) => {
+        if (e.target === holidaysModal) {
+            holidaysModal.style.display = 'none';
+        }
+    });
+
     changePasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -379,8 +478,8 @@ function initApp() {
             const name = document.getElementById('userName').value.trim();
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
-            const ferieResidue = parseInt(document.getElementById('userFerie').value);
-            const rolResidui = parseInt(document.getElementById('userRol').value);
+            const ferieResidue = parseFloat(document.getElementById('userFerie').value);
+            const rolResidui = parseFloat(document.getElementById('userRol').value);
 
             // Validazione username univoco (solo per nuovi utenti)
             if (!editUserId && DB.users[username]) {
@@ -396,13 +495,29 @@ function initApp() {
             };
 
             // Aggiungi password solo se è un nuovo utente o se è stata cambiata
-            if (!editUserId || password) {
+            if (!editUserId) {
+                // Nuovo utente - password obbligatoria
+                if (!password) {
+                    alert('La password è obbligatoria per i nuovi utenti');
+                    return;
+                }
+                userData.password = password;
+            } else if (password) {
+                // Utente esistente - password opzionale
                 userData.password = password;
             }
 
             try {
                 const targetUsername = editUserId || username;
+                
+                // Per utenti esistenti, mantieni la password corrente se non è stata modificata
+                if (editUserId && !password && DB.users[targetUsername]) {
+                    userData.password = DB.users[targetUsername].password;
+                }
+                
+                console.log('Tentativo di salvataggio:', targetUsername, userData);
                 await database.ref(`users/${targetUsername}`).update(userData);
+                console.log('Salvataggio completato con successo');
                 
                 // Aggiorna DB locale
                 if (!DB.users[targetUsername]) {
@@ -413,9 +528,8 @@ function initApp() {
                     DB.users[targetUsername].username = targetUsername;
                 }
 
-                // Aggiorna select se admin
+                // Aggiorna lista utenti se admin
                 if (currentUser.role === 'admin') {
-                    populateUserSelect();
                     renderUsersList();
                 }
 
@@ -424,7 +538,8 @@ function initApp() {
                 userForm.reset();
             } catch (error) {
                 console.error('Errore salvataggio utente:', error);
-                alert('Errore durante il salvataggio');
+                console.error('Dettagli errore:', error.message, error.code);
+                alert('Errore durante il salvataggio: ' + error.message);
             }
         });
     }
@@ -499,7 +614,7 @@ function initializeApp() {
         document.getElementById('adminUserSelection').style.display = 'flex';
         document.getElementById('viewToggle').style.display = 'flex';
         document.getElementById('exportExcelBtn').style.display = 'inline-flex';
-        document.getElementById('adminUserManagement').style.display = 'block';
+        document.getElementById('usersManagementBtn').style.display = 'inline-flex';
         renderUsersList();
         // Admin parte visualizzando se stesso
         selectedUser = currentUser.username;
@@ -507,7 +622,7 @@ function initializeApp() {
     } else {
         document.getElementById('adminUserSelection').style.display = 'none';
         document.getElementById('viewToggle').style.display = 'none';
-        document.getElementById('adminUserManagement').style.display = 'none';
+        document.getElementById('usersManagementBtn').style.display = 'none';
     }
 
     // Mostra balance ferie/ROL
@@ -592,21 +707,10 @@ async function editUser(username) {
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
     
-    // Prendi i valori attuali
-    let ferieOre = user.ferieResidue || 0;
-    let rolOre = user.rolResidui || 0;
-    
-    // Se i valori sono decimali strani, arrotonda a multipli di 8
-    ferieOre = Math.round(ferieOre / 8) * 8;
-    rolOre = Math.round(rolOre / 8) * 8;
-    
-    // Se i valori sono 0 o molto bassi, imposta valori di default
-    if (ferieOre < 8) ferieOre = 208;
-    if (rolOre < 8) rolOre = 120;
-    
-    document.getElementById('userFerie').value = ferieOre;
+    // Usa i valori esatti senza arrotondamenti
+    document.getElementById('userFerie').value = user.ferieResidue || 208;
     document.getElementById('userFerie').disabled = false;
-    document.getElementById('userRol').value = rolOre;
+    document.getElementById('userRol').value = user.rolResidui || 120;
     document.getElementById('userRol').disabled = false;
     document.getElementById('userModal').style.display = 'flex';
 }
@@ -1649,6 +1753,80 @@ async function exportCalendarToExcel(username, month) {
     a.download = `Ore_${user.name.replace(' ', '_')}_${month.replace(' ', '_')}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
+}
+
+// Italian Holidays Calculator
+function calculateEaster(year) {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+}
+
+function getItalianHolidays(year) {
+    const easter = calculateEaster(year);
+    const easterMonday = new Date(easter);
+    easterMonday.setDate(easter.getDate() + 1);
+
+    return [
+        { date: new Date(year, 0, 1), name: 'Capodanno', type: 'nazionale' },
+        { date: new Date(year, 0, 6), name: 'Epifania', type: 'nazionale' },
+        { date: easter, name: 'Pasqua', type: 'nazionale' },
+        { date: easterMonday, name: 'Lunedì dell\'Angelo (Pasquetta)', type: 'nazionale' },
+        { date: new Date(year, 3, 25), name: 'Festa della Liberazione', type: 'nazionale' },
+        { date: new Date(year, 4, 1), name: 'Festa dei Lavoratori', type: 'nazionale' },
+        { date: new Date(year, 5, 2), name: 'Festa della Repubblica', type: 'nazionale' },
+        { date: new Date(year, 7, 15), name: 'Assunzione di Maria (Ferragosto)', type: 'nazionale' },
+        { date: new Date(year, 10, 1), name: 'Ognissanti', type: 'nazionale' },
+        { date: new Date(year, 11, 8), name: 'Immacolata Concezione', type: 'nazionale' },
+        { date: new Date(year, 11, 25), name: 'Natale', type: 'nazionale' },
+        { date: new Date(year, 11, 26), name: 'Santo Stefano', type: 'nazionale' }
+    ].sort((a, b) => a.date - b.date);
+}
+
+function renderHolidaysList(year) {
+    const holidays = getItalianHolidays(year);
+    const container = document.getElementById('holidaysList');
+    
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+    
+    holidays.forEach(holiday => {
+        const dayName = dayNames[holiday.date.getDay()];
+        const day = holiday.date.getDate();
+        const month = monthNames[holiday.date.getMonth()];
+        
+        html += `
+            <div style="padding: 15px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid #e74c3c;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px; color: var(--text-primary);">${holiday.name}</div>
+                        <div style="color: var(--text-secondary); font-size: 14px;">${dayName}, ${day} ${month} ${year}</div>
+                    </div>
+                    <div style="background: #e74c3c; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 500; font-size: 14px;">
+                        ${day} ${month.substring(0, 3)}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // Dark Mode Toggle
