@@ -6,16 +6,16 @@ const DB = {
             password: null, // null = primo accesso
             name: 'Alessandro Costantini',
             role: 'admin',
-            ferieResidue: 208, // Ore di ferie disponibili (26 giorni x 8 ore)
-            rolResidui: 120    // Ore di ROL disponibili (15 giorni x 8 ore)
+            ferieResidue: 0,   // Ore di ferie disponibili
+            rolResidui: 0      // Ore di ROL disponibili (include ex festività)
         },
         'denise_raimondi': {
             username: 'denise_raimondi',
             password: null,
             name: 'Denise Raimondi',
             role: 'employee',
-            ferieResidue: 208, // 26 giorni x 8 ore
-            rolResidui: 120    // 15 giorni x 8 ore
+            ferieResidue: 0,
+            rolResidui: 0
         },
         'sandy_oduro': {
             username: 'sandy_oduro',
@@ -30,8 +30,8 @@ const DB = {
             password: null,
             name: 'Luca Avesani',
             role: 'employee',
-            ferieResidue: 208,
-            rolResidui: 120
+            ferieResidue: 0,
+            rolResidui: 0
         },
         'sophie_rizzin': {
             username: 'sophie_rizzin',
@@ -161,8 +161,8 @@ function saveDataToStorage() {
 // Controllo e aggiunta ore mensili ferie
 async function checkAndAddMonthlyLeave() {
     const usersWithMonthlyLeave = ['alessandrocostantini', 'lucaavesani', 'deniseraimondi'];
-    const monthlyFerieHours = 17.36;
-    const monthlyRolHours = 8.67;
+    const monthlyFerieHours = 14.3;  // 172 ore annue / 12 mesi
+    const monthlyRolHours = 11.3;     // 136 ore annue / 12 mesi (include ex festività)
     
     try {
         // Ottieni l'ultimo mese processato
@@ -194,7 +194,7 @@ async function checkAndAddMonthlyLeave() {
                     DB.users[username].ferieResidue = newFerie;
                     DB.users[username].rolResidui = newRol;
                     
-                    console.log(`✅ ${username}: Ferie +${monthlyFerieHours}h (${currentFerie} → ${newFerie}), ROL +${monthlyRolHours}h (${currentRol} → ${newRol})`);
+                    console.log(`✅ ${username}: Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(1)} → ${newRol.toFixed(1)})`);
                 }
             }
             

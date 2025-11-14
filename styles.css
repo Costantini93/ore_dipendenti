@@ -1638,6 +1638,9 @@ footer {
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     margin-top: 3rem;
+    width: 100%;
+    position: relative;
+    z-index: 1;
 }
 
 footer strong {
@@ -1650,6 +1653,13 @@ footer strong {
 }
 
 /* Fix scroll orizzontale mobile */
+@media (max-width: 768px) {
+    footer {
+        margin: 2rem 0.5rem 1rem 0.5rem;
+        padding: 1.5rem 1rem !important;
+        display: block !important;
+    }
+}
 @media (max-width: 768px) {
     * {
         max-width: 100%;
