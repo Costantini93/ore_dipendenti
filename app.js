@@ -993,10 +993,94 @@ function exportTableViewToExcel(month) {
         colWidths.push({ wch: 20 }); // Colonne dipendenti
     });
     ws['!cols'] = colWidths;
-    ws['!cols'] = colWidths;
+    
+    // Applica stili alle celle
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // Stile header (prima riga) - grigio
+    for (let C = range.s.c; C <= range.e.c; C++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!ws[cellAddress]) continue;
+        ws[cellAddress].s = {
+            fill: { fgColor: { rgb: "D3D3D3" } },
+            font: { bold: true, color: { rgb: "000000" } },
+            alignment: { horizontal: "center", vertical: "center" }
+        };
+    }
+    
+    // Stile colonna giorni (prima colonna) - grigio
+    for (let R = 1; R <= daysInMonth; R++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: 0 });
+        if (!ws[cellAddress]) continue;
+        ws[cellAddress].s = {
+            fill: { fgColor: { rgb: "D3D3D3" } },
+            font: { bold: true },
+            alignment: { horizontal: "center" }
+        };
+    }
+    
+    // Stile celle dati (giorni lavorati, ferie, rol, off)
+    for (let R = 1; R <= daysInMonth; R++) {
+        for (let C = 1; C <= allUsers.length; C++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cellAddress] || !ws[cellAddress].v) continue;
+            
+            const cellValue = ws[cellAddress].v.toString().toUpperCase();
+            
+            if (cellValue === 'F' || cellValue.includes('FERIE')) {
+                // Ferie - cella gialla
+                ws[cellAddress] = {
+                    v: 'FERIE',
+                    t: 's',
+                    s: {
+                        fill: { fgColor: { rgb: "FFFF00" } },
+                        font: { bold: true, color: { rgb: "000000" } },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    }
+                };
+            } else if (cellValue === 'R' || cellValue.includes('ROL')) {
+                // ROL - cella verde
+                ws[cellAddress] = {
+                    v: 'ROL',
+                    t: 's',
+                    s: {
+                        fill: { fgColor: { rgb: "90EE90" } },
+                        font: { bold: true, color: { rgb: "000000" } },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    }
+                };
+            } else if (cellValue === 'OFF') {
+                // OFF - cella rossa
+                ws[cellAddress].s = {
+                    fill: { fgColor: { rgb: "FF6B6B" } },
+                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                    alignment: { horizontal: "center", vertical: "center" }
+                };
+            } else {
+                // Ore lavorate - cella bianca
+                ws[cellAddress].s = {
+                    alignment: { horizontal: "center", vertical: "center" }
+                };
+            }
+        }
+    }
+    
+    // Stile righe totali (TOT ORE, FERIE, ROL) - grigio scuro
+    const totalRowStart = daysInMonth + 2; // +1 per header, +1 per riga vuota
+    for (let R = totalRowStart; R <= totalRowStart + 2; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cellAddress]) continue;
+            ws[cellAddress].s = {
+                fill: { fgColor: { rgb: C === 0 ? "808080" : "D3D3D3" } },
+                font: { bold: true, color: { rgb: C === 0 ? "FFFFFF" : "000000" } },
+                alignment: { horizontal: "center", vertical: "center" }
+            };
+        }
+    }
     
     XLSX.utils.book_append_sheet(wb, ws, 'Resoconto');
-    XLSX.writeFile(wb, `Resoconto_${month.replace(' ', '_')}.xlsx`);
+    XLSX.writeFile(wb, `Resoconto_${month.replace(' ', '_')}.xlsx`, { cellStyles: true });
 }
 
 function exportCalendarToExcel(username, month) {
