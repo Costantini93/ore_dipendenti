@@ -269,6 +269,154 @@ function initApp() {
         document.getElementById('loginForm').reset();
     });
 
+    // Change Password
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const closePasswordModal = document.getElementById('closePasswordModal');
+    const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
+    const changePasswordForm = document.getElementById('changePasswordForm');
+
+    changePasswordBtn.addEventListener('click', () => {
+        changePasswordModal.style.display = 'flex';
+        changePasswordForm.reset();
+    });
+
+    closePasswordModal.addEventListener('click', () => {
+        changePasswordModal.style.display = 'none';
+    });
+
+    cancelPasswordBtn.addEventListener('click', () => {
+        changePasswordModal.style.display = 'none';
+    });
+
+    changePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        // Validazione
+        if (newPassword.length < 4) {
+            alert('La nuova password deve contenere almeno 4 caratteri');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            alert('Le password non coincidono');
+            return;
+        }
+
+        // Verifica password attuale
+        if (DB.users[currentUser].password !== currentPassword) {
+            alert('Password attuale errata');
+            return;
+        }
+
+        // Aggiorna password in Firebase
+        try {
+            await update(ref(database, `users/${currentUser}`), {
+                password: newPassword
+            });
+
+            DB.users[currentUser].password = newPassword;
+            alert('Password cambiata con successo!');
+            changePasswordModal.style.display = 'none';
+            changePasswordForm.reset();
+        } catch (error) {
+            console.error('Errore cambio password:', error);
+            alert('Errore durante il cambio password');
+        }
+    });
+
+    // User Management (Admin only)
+    const addUserBtn = document.getElementById('addUserBtn');
+    const userModal = document.getElementById('userModal');
+    const closeUserModal = document.getElementById('closeUserModal');
+    const cancelUserBtn = document.getElementById('cancelUserBtn');
+    const userForm = document.getElementById('userForm');
+
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+            document.getElementById('userModalTitle').textContent = 'Aggiungi Utente';
+            document.getElementById('editUserId').value = '';
+            userForm.reset();
+            document.getElementById('userUsername').disabled = false;
+            userModal.style.display = 'flex';
+        });
+    }
+
+    if (closeUserModal) {
+        closeUserModal.addEventListener('click', () => {
+            userModal.style.display = 'none';
+        });
+    }
+
+    if (cancelUserBtn) {
+        cancelUserBtn.addEventListener('click', () => {
+            userModal.style.display = 'none';
+        });
+    }
+
+    if (userForm) {
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const editUserId = document.getElementById('editUserId').value;
+            const username = document.getElementById('userUsername').value.toLowerCase().trim();
+            const name = document.getElementById('userName').value.trim();
+            const password = document.getElementById('userPassword').value;
+            const role = document.getElementById('userRole').value;
+            const ferieResidue = parseInt(document.getElementById('userFerie').value);
+            const rolResidui = parseInt(document.getElementById('userRol').value);
+
+            // Validazione username univoco (solo per nuovi utenti)
+            if (!editUserId && DB.users[username]) {
+                alert('Username già esistente. Scegli un altro username.');
+                return;
+            }
+
+            const userData = {
+                name,
+                role,
+                ferieResidue,
+                rolResidui
+            };
+
+            // Aggiungi password solo se è un nuovo utente o se è stata cambiata
+            if (!editUserId || password) {
+                userData.password = password;
+            }
+
+            try {
+                const targetUsername = editUserId || username;
+                await update(ref(database, `users/${targetUsername}`), userData);
+                
+                // Aggiorna DB locale
+                if (!DB.users[targetUsername]) {
+                    DB.users[targetUsername] = {};
+                }
+                Object.assign(DB.users[targetUsername], userData);
+                if (!editUserId) {
+                    DB.users[targetUsername].username = targetUsername;
+                }
+
+                // Aggiorna select se admin
+                if (currentUser.role === 'admin') {
+                    populateUserSelect();
+                    renderUsersList();
+                }
+
+                alert(editUserId ? 'Utente aggiornato con successo!' : 'Utente creato con successo!');
+                userModal.style.display = 'none';
+                userForm.reset();
+            } catch (error) {
+                console.error('Errore salvataggio utente:', error);
+                alert('Errore durante il salvataggio');
+            }
+        });
+    }
+
     // Navigazione mesi
     document.getElementById('prevMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
@@ -333,12 +481,15 @@ function initializeApp() {
         document.getElementById('adminUserSelection').style.display = 'flex';
         document.getElementById('viewToggle').style.display = 'flex';
         document.getElementById('exportExcelBtn').style.display = 'inline-flex';
+        document.getElementById('adminUserManagement').style.display = 'block';
+        renderUsersList();
         // Admin parte visualizzando se stesso
         selectedUser = currentUser.username;
         document.getElementById('userSelect').value = currentUser.username;
     } else {
         document.getElementById('adminUserSelection').style.display = 'none';
         document.getElementById('viewToggle').style.display = 'none';
+        document.getElementById('adminUserManagement').style.display = 'none';
     }
 
     // Mostra balance ferie/ROL
@@ -353,6 +504,119 @@ function updateLeaveBalance() {
     const user = DB.users[selectedUser];
     document.getElementById('ferieResidue').textContent = user.ferieResidue || 0;
     document.getElementById('rolResidui').textContent = user.rolResidui || 0;
+}
+
+// Render users list for admin
+function renderUsersList() {
+    const usersList = document.getElementById('usersList');
+    if (!usersList) return;
+
+    usersList.innerHTML = '';
+    
+    Object.keys(DB.users).forEach(username => {
+        const user = DB.users[username];
+        const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        
+        const userItem = document.createElement('div');
+        userItem.className = 'user-item';
+        userItem.innerHTML = `
+            <div class="user-info">
+                <div class="user-avatar">${initials}</div>
+                <div class="user-details">
+                    <div class="user-name">
+                        ${user.name}
+                        <span class="user-badge badge-${user.role}">${user.role === 'admin' ? 'Admin' : 'Dipendente'}</span>
+                    </div>
+                    <div class="user-meta">
+                        @${username} • Ferie: ${user.ferieResidue || 0} • ROL: ${user.rolResidui || 0}
+                    </div>
+                </div>
+            </div>
+            <div class="user-actions">
+                <button class="btn-icon-small edit" onclick="editUser('${username}')" title="Modifica">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="btn-icon-small reset" onclick="resetUserPassword('${username}')" title="Reset Password">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM8.9 6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H8.9V6z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="btn-icon-small delete" onclick="deleteUser('${username}')" title="Elimina">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+        usersList.appendChild(userItem);
+    });
+}
+
+// Edit user
+async function editUser(username) {
+    const user = DB.users[username];
+    document.getElementById('userModalTitle').textContent = 'Modifica Utente';
+    document.getElementById('editUserId').value = username;
+    document.getElementById('userName').value = user.name;
+    document.getElementById('userUsername').value = username;
+    document.getElementById('userUsername').disabled = true;
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userPassword').required = false;
+    document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
+    document.getElementById('userRole').value = user.role;
+    document.getElementById('userFerie').value = user.ferieResidue || 0;
+    document.getElementById('userRol').value = user.rolResidui || 0;
+    document.getElementById('userModal').style.display = 'flex';
+}
+
+// Delete user
+async function deleteUser(username) {
+    if (username === currentUser.username) {
+        alert('Non puoi eliminare il tuo account mentre sei loggato!');
+        return;
+    }
+
+    if (!confirm(`Sei sicuro di voler eliminare l'utente ${DB.users[username].name}?\nQuesta azione è irreversibile!`)) {
+        return;
+    }
+
+    try {
+        await remove(ref(database, `users/${username}`));
+        await remove(ref(database, `timeEntries/${username}`));
+        delete DB.users[username];
+        delete DB.timeEntries[username];
+        
+        populateUserSelect();
+        renderUsersList();
+        alert('Utente eliminato con successo!');
+    } catch (error) {
+        console.error('Errore eliminazione utente:', error);
+        alert('Errore durante l\'eliminazione');
+    }
+}
+
+// Reset user password
+async function resetUserPassword(username) {
+    const newPassword = prompt(`Inserisci la nuova password per ${DB.users[username].name}:`);
+    if (!newPassword) return;
+
+    if (newPassword.length < 4) {
+        alert('La password deve contenere almeno 4 caratteri');
+        return;
+    }
+
+    try {
+        await update(ref(database, `users/${username}`), {
+            password: newPassword
+        });
+        DB.users[username].password = newPassword;
+        alert('Password resettata con successo!');
+    } catch (error) {
+        console.error('Errore reset password:', error);
+        alert('Errore durante il reset password');
+    }
 }
 
 // Aggiorna display del mese
