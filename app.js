@@ -452,6 +452,7 @@ function initApp() {
             document.getElementById('editUserId').value = '';
             userForm.reset();
             document.getElementById('userUsername').disabled = false;
+            document.getElementById('userUsername').readOnly = false;
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
@@ -467,6 +468,27 @@ function initApp() {
     if (cancelUserBtn) {
         cancelUserBtn.addEventListener('click', () => {
             userModal.style.display = 'none';
+        });
+    }
+
+    // Auto-genera username dal nome completo
+    const userNameInput = document.getElementById('userName');
+    const userUsernameInput = document.getElementById('userUsername');
+    
+    if (userNameInput && userUsernameInput) {
+        userNameInput.addEventListener('input', (e) => {
+            // Genera username solo se non è in modalità modifica
+            const editUserId = document.getElementById('editUserId').value;
+            if (!editUserId) {
+                const fullName = e.target.value.trim();
+                // Converti in lowercase, sostituisci spazi con underscore, rimuovi caratteri speciali
+                const username = fullName
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Rimuove accenti
+                    .replace(/[^a-z0-9\s]/g, '') // Rimuove caratteri speciali
+                    .replace(/\s+/g, '_'); // Sostituisce spazi con underscore
+                userUsernameInput.value = username;
+            }
         });
     }
 
@@ -735,6 +757,7 @@ async function editUser(username) {
     document.getElementById('userName').value = user.name;
     document.getElementById('userUsername').value = username;
     document.getElementById('userUsername').disabled = true;
+    document.getElementById('userUsername').readOnly = true;
     document.getElementById('userPassword').value = '';
     document.getElementById('userPassword').disabled = false;
     document.getElementById('userPassword').required = false;

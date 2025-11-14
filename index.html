@@ -296,12 +296,12 @@
                 <input type="hidden" id="editUserId" value="">
                 <div class="form-group">
                     <label for="userName">Nome Completo</label>
-                    <input type="text" id="userName" name="userName" required>
+                    <input type="text" id="userName" name="userName" required placeholder="Es: Mario Rossi">
                 </div>
                 <div class="form-group">
-                    <label for="userUsername">Username (ID unico)</label>
-                    <input type="text" id="userUsername" name="userUsername" required>
-                    <small style="color: #666;">Es: nome.cognome (senza spazi)</small>
+                    <label for="userUsername">Username (generato automaticamente)</label>
+                    <input type="text" id="userUsername" name="userUsername" required readonly>
+                    <small style="color: #666;">Generato automaticamente da nome e cognome</small>
                 </div>
                 <div class="form-group">
                     <label for="userPassword">Password Iniziale</label>
