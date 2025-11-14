@@ -6,48 +6,48 @@ const DB = {
             password: null, // null = primo accesso
             name: 'Alessandro Costantini',
             role: 'admin',
-            ferieResidue: 26, // Giorni ferie disponibili
-            rolResidui: 15    // Giorni ROL disponibili
+            ferieResidue: 208, // Ore di ferie disponibili (26 giorni x 8 ore)
+            rolResidui: 120    // Ore di ROL disponibili (15 giorni x 8 ore)
         },
         'denise_raimondi': {
             username: 'denise_raimondi',
             password: null,
             name: 'Denise Raimondi',
             role: 'employee',
-            ferieResidue: 26,
-            rolResidui: 15
+            ferieResidue: 208, // 26 giorni x 8 ore
+            rolResidui: 120    // 15 giorni x 8 ore
         },
         'sandy_oduro': {
             username: 'sandy_oduro',
             password: null,
             name: 'Sandy Oduro',
             role: 'employee',
-            ferieResidue: 26,
-            rolResidui: 15
+            ferieResidue: 208,
+            rolResidui: 120
         },
         'luca_avesani': {
             username: 'luca_avesani',
             password: null,
             name: 'Luca Avesani',
             role: 'employee',
-            ferieResidue: 26,
-            rolResidui: 15
+            ferieResidue: 208,
+            rolResidui: 120
         },
         'sophie_rizzin': {
             username: 'sophie_rizzin',
             password: null,
             name: 'Sophie Rizzin',
             role: 'employee',
-            ferieResidue: 26,
-            rolResidui: 15
+            ferieResidue: 208,
+            rolResidui: 120
         },
         'sofia_bilianska': {
             username: 'sofia_bilianska',
             password: null,
             name: 'Sofia Bilianska',
             role: 'employee',
-            ferieResidue: 26,
-            rolResidui: 15
+            ferieResidue: 208,
+            rolResidui: 120
         }
     },
     timeEntries: {} // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -135,8 +135,8 @@ function saveDataToStorage() {
         Object.keys(DB.users).forEach(username => {
             usersToSave[username] = {
                 password: DB.users[username].password,
-                ferieResidue: DB.users[username].ferieResidue || 26,
-                rolResidui: DB.users[username].rolResidui || 15
+                ferieResidue: DB.users[username].ferieResidue || 208, // 26 giorni x 8 ore
+                rolResidui: DB.users[username].rolResidui || 120      // 15 giorni x 8 ore
             };
         });
         
@@ -511,8 +511,10 @@ function initializeApp() {
 // Aggiorna balance ferie/ROL
 function updateLeaveBalance() {
     const user = DB.users[selectedUser];
-    document.getElementById('ferieResidue').textContent = user.ferieResidue || 0;
-    document.getElementById('rolResidui').textContent = user.rolResidui || 0;
+    const ferieOre = user.ferieResidue || 0;
+    const ferieGiorni = (ferieOre / 8).toFixed(1); // Converti ore in giorni
+    document.getElementById('ferieResidue').textContent = `${ferieGiorni} gg`;
+    document.getElementById('rolResidui').textContent = `${user.rolResidui || 0}h`;
 }
 
 // Render users list for admin
@@ -525,6 +527,7 @@ function renderUsersList() {
     Object.keys(DB.users).forEach(username => {
         const user = DB.users[username];
         const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        const ferieGiorni = ((user.ferieResidue || 0) / 8).toFixed(1);
         
         const userItem = document.createElement('div');
         userItem.className = 'user-item';
@@ -537,7 +540,7 @@ function renderUsersList() {
                         <span class="user-badge badge-${user.role}">${user.role === 'admin' ? 'Admin' : 'Dipendente'}</span>
                     </div>
                     <div class="user-meta">
-                        @${username} • Ferie: ${user.ferieResidue || 0} • ROL: ${user.rolResidui || 0}
+                        @${username} • Ferie: ${ferieGiorni}gg • ROL: ${user.rolResidui || 0}h
                     </div>
                 </div>
             </div>
@@ -914,32 +917,35 @@ function saveTimeEntry() {
         entry.hours = 0;
     }
 
-    // Gestione contatori ferie/ROL
+    // Gestione contatori ferie/ROL in ORE
     const user = DB.users[viewingUser];
     
-    // Ripristina giorni se cambia da ferie/ROL a altro tipo
+    // Ripristina ore se cambia da ferie/ROL a altro tipo
     if (oldEntry) {
         if (oldEntry.type === 'ferie' && dayType !== 'ferie') {
-            user.ferieResidue = (user.ferieResidue || 0) + 1;
+            // Ripristina 8 ore (1 giorno)
+            user.ferieResidue = (user.ferieResidue || 0) + 8;
         }
         if (oldEntry.type === 'rol' && dayType !== 'rol') {
-            user.rolResidui = (user.rolResidui || 0) + 1;
+            // Ripristina 8 ore (1 giorno)
+            user.rolResidui = (user.rolResidui || 0) + 8;
         }
     }
     
-    // Decrementa giorni se è ferie/ROL
+    // Decrementa ore se è ferie/ROL (8 ore = 1 giorno)
     if (dayType === 'ferie') {
-        if ((user.ferieResidue || 0) <= 0) {
-            alert('⚠️ Attenzione: hai esaurito i giorni di ferie disponibili!');
+        if ((user.ferieResidue || 0) < 8) {
+            const giorniRimasti = ((user.ferieResidue || 0) / 8).toFixed(1);
+            alert(`⚠️ Attenzione: hai solo ${giorniRimasti} giorni di ferie disponibili!`);
         }
-        user.ferieResidue = Math.max(0, (user.ferieResidue || 0) - 1);
+        user.ferieResidue = Math.max(0, (user.ferieResidue || 0) - 8);
     }
     
     if (dayType === 'rol') {
-        if ((user.rolResidui || 0) <= 0) {
-            alert('⚠️ Attenzione: hai esaurito i giorni di ROL disponibili!');
+        if ((user.rolResidui || 0) < 8) {
+            alert(`⚠️ Attenzione: hai solo ${user.rolResidui || 0} ore di ROL disponibili!`);
         }
-        user.rolResidui = Math.max(0, (user.rolResidui || 0) - 1);
+        user.rolResidui = Math.max(0, (user.rolResidui || 0) - 8);
     }
 
     DB.timeEntries[viewingUser][dateStr] = entry;
