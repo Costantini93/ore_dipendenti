@@ -889,7 +889,8 @@ function exportToExcel() {
 }
 
 function exportTableViewToExcel(month) {
-    const employees = Object.keys(DB.users).filter(u => DB.users[u].role === 'employee');
+    // Include admin + employees
+    const allUsers = Object.keys(DB.users);
     const year = currentDate.getFullYear();
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -905,8 +906,8 @@ function exportTableViewToExcel(month) {
     headerRow.push('TOT ORE', 'FERIE', 'ROL');
     data.push(headerRow);
     
-    // Righe dipendenti
-    employees.forEach(username => {
+    // Righe di tutti gli utenti (admin + dipendenti)
+    allUsers.forEach(username => {
         const user = DB.users[username];
         const row = [user.name];
         
@@ -920,7 +921,9 @@ function exportTableViewToExcel(month) {
             
             if (entry) {
                 if (entry.type === 'work' && entry.hours) {
-                    row.push(entry.hours.toFixed(1));
+                    // Mostra ore con orari
+                    const cellValue = `${entry.hours.toFixed(1)}h (${entry.startTime}-${entry.endTime})`;
+                    row.push(cellValue);
                     totalHours += entry.hours;
                 } else if (entry.type === 'ferie') {
                     row.push('F');
@@ -963,10 +966,10 @@ function exportCalendarToExcel(username, month) {
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     
     const data = [];
-    data.push([`Resoconto Ore - ${user.name}`, '', '']);
-    data.push([`Mese: ${month}`, '', '']);
+    data.push([`Resoconto Ore - ${user.name}`, '', '', '']);
+    data.push([`Mese: ${month}`, '', '', '']);
     data.push([]); // Riga vuota
-    data.push(['Data', 'Tipo', 'Ore']);
+    data.push(['Data', 'Tipo', 'Orario', 'Ore']);
     
     let totalHours = 0;
     let ferieDays = 0;
@@ -981,29 +984,30 @@ function exportCalendarToExcel(username, month) {
         
         if (entry) {
             if (entry.type === 'work' && entry.hours) {
-                data.push([dateFormatted, 'Lavoro', entry.hours.toFixed(1)]);
+                const orario = `${entry.startTime} - ${entry.endTime}`;
+                data.push([dateFormatted, 'Lavoro', orario, entry.hours.toFixed(1)]);
                 totalHours += entry.hours;
             } else if (entry.type === 'ferie') {
-                data.push([dateFormatted, 'Ferie', '-']);
+                data.push([dateFormatted, 'Ferie', '-', '-']);
                 ferieDays++;
             } else if (entry.type === 'rol') {
-                data.push([dateFormatted, 'ROL', '-']);
+                data.push([dateFormatted, 'ROL', '-', '-']);
                 rolDays++;
             } else if (entry.type === 'off') {
-                data.push([dateFormatted, 'OFF', '-']);
+                data.push([dateFormatted, 'OFF', '-', '-']);
             }
         }
     }
     
     data.push([]); // Riga vuota
-    data.push(['TOTALE ORE', '', totalHours.toFixed(1)]);
-    data.push(['Giorni Ferie', '', ferieDays]);
-    data.push(['Giorni ROL', '', rolDays]);
+    data.push(['TOTALE ORE', '', '', totalHours.toFixed(1)]);
+    data.push(['Giorni Ferie', '', '', ferieDays]);
+    data.push(['Giorni ROL', '', '', rolDays]);
     
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
     
-    ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 10 }];
+    ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
     
     XLSX.utils.book_append_sheet(wb, ws, user.name.split(' ')[0]);
     XLSX.writeFile(wb, `Ore_${user.name.replace(' ', '_')}_${month.replace(' ', '_')}.xlsx`);
