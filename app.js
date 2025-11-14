@@ -475,7 +475,8 @@ function initApp() {
             e.preventDefault();
             
             const editUserId = document.getElementById('editUserId').value;
-            const username = document.getElementById('userUsername').value.toLowerCase().trim();
+            // Normalizza username: lowercase, trim e sostituisci spazi con underscore
+            const username = document.getElementById('userUsername').value.toLowerCase().trim().replace(/\s+/g, '_');
             const name = document.getElementById('userName').value.trim();
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
@@ -702,8 +703,12 @@ function renderUsersList() {
 // Popola il menu a tendina per la selezione utente
 function populateUserSelect() {
     const userSelect = document.getElementById('userSelect');
-    if (!userSelect) return;
+    if (!userSelect) {
+        console.log('⚠️ userSelect non trovato');
+        return;
+    }
     
+    console.log('🔄 Aggiornamento menu utenti, utenti nel DB:', Object.keys(DB.users));
     userSelect.innerHTML = '';
     
     Object.keys(DB.users).forEach(username => {
@@ -718,6 +723,8 @@ function populateUserSelect() {
     if (selectedUser && DB.users[selectedUser]) {
         userSelect.value = selectedUser;
     }
+    
+    console.log('✅ Menu utenti aggiornato con', userSelect.options.length, 'opzioni');
 }
 
 // Edit user
@@ -749,11 +756,17 @@ async function deleteUser(username) {
         return;
     }
 
+    if (!DB.users[username]) {
+        alert('Utente non trovato!');
+        return;
+    }
+
     if (!confirm(`Sei sicuro di voler eliminare l'utente ${DB.users[username].name}?\nQuesta azione è irreversibile!`)) {
         return;
     }
 
     try {
+        console.log('Eliminazione utente:', username);
         await database.ref(`users/${username}`).remove();
         await database.ref(`timeEntries/${username}`).remove();
         delete DB.users[username];
@@ -773,7 +786,8 @@ async function deleteUser(username) {
         alert('Utente eliminato con successo!');
     } catch (error) {
         console.error('Errore eliminazione utente:', error);
-        alert('Errore durante l\'eliminazione: ' + error.message);
+        const errorMsg = error && error.message ? error.message : 'Errore sconosciuto';
+        alert('Errore durante l\'eliminazione: ' + errorMsg);
     }
 }
 
