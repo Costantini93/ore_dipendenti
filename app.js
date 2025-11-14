@@ -97,10 +97,20 @@ async function loadDataFromStorage() {
                             DB.users[username].password = data[username].password;
                         }
                         if (data[username].ferieResidue !== undefined) {
-                            DB.users[username].ferieResidue = data[username].ferieResidue;
+                            let ferieValue = data[username].ferieResidue;
+                            // Converti da giorni a ore se il valore è < 100 (era in giorni)
+                            if (ferieValue < 100) {
+                                ferieValue = ferieValue * 8;
+                            }
+                            DB.users[username].ferieResidue = ferieValue;
                         }
                         if (data[username].rolResidui !== undefined) {
-                            DB.users[username].rolResidui = data[username].rolResidui;
+                            let rolValue = data[username].rolResidui;
+                            // Converti da giorni a ore se il valore è < 100 (era in giorni)
+                            if (rolValue < 100) {
+                                rolValue = rolValue * 8;
+                            }
+                            DB.users[username].rolResidui = rolValue;
                         }
                     }
                 });
@@ -578,8 +588,21 @@ async function editUser(username) {
     document.getElementById('userPassword').required = false;
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
-    document.getElementById('userFerie').value = user.ferieResidue || 0;
-    document.getElementById('userRol').value = user.rolResidui || 0;
+    
+    // Converti valori vecchi (giorni) in ore se necessario
+    let ferieOre = user.ferieResidue || 0;
+    let rolOre = user.rolResidui || 0;
+    
+    // Se i valori sono molto bassi (< 100), probabilmente sono in giorni, converti in ore
+    if (ferieOre < 100) {
+        ferieOre = ferieOre * 8;
+    }
+    if (rolOre < 100) {
+        rolOre = rolOre * 8;
+    }
+    
+    document.getElementById('userFerie').value = ferieOre;
+    document.getElementById('userRol').value = rolOre;
     document.getElementById('userModal').style.display = 'flex';
 }
 
