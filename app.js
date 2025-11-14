@@ -451,12 +451,15 @@ function initApp() {
             document.getElementById('userModalTitle').textContent = 'Aggiungi Utente';
             document.getElementById('editUserId').value = '';
             userForm.reset();
-            document.getElementById('userUsername').disabled = false;
-            document.getElementById('userUsername').readOnly = false;
-            document.getElementById('userUsername').style.backgroundColor = '#f8f9fa';
+            const usernameInput = document.getElementById('userUsername');
+            usernameInput.disabled = false;
+            usernameInput.readOnly = false;
+            usernameInput.removeAttribute('required');
+            usernameInput.style.backgroundColor = '#f8f9fa';
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
+            console.log('✅ Modal aperto, username field pronto per auto-generazione');
         });
     }
 
@@ -477,6 +480,7 @@ function initApp() {
     const userUsernameInput = document.getElementById('userUsername');
     
     if (userNameInput && userUsernameInput) {
+        console.log('✅ Event listener per auto-generazione username installato');
         userNameInput.addEventListener('input', (e) => {
             // Genera username solo se non è in modalità modifica
             const editUserId = document.getElementById('editUserId').value;
@@ -489,8 +493,11 @@ function initApp() {
                     .replace(/[^a-z0-9\s]/g, '') // Rimuove caratteri speciali
                     .replace(/\s+/g, '_'); // Sostituisce spazi con underscore
                 userUsernameInput.value = username;
+                console.log('🔄 Username generato:', username);
             }
         });
+    } else {
+        console.error('⚠️ Elementi userName o userUsername non trovati!');
     }
 
     if (userForm) {
