@@ -948,11 +948,11 @@ function exportTableViewToExcel(month) {
     const ws = XLSX.utils.aoa_to_sheet(data);
     
     // Stile celle (larghezze colonne)
-    const colWidths = [{ wch: 20 }]; // Nome dipendente
+    const colWidths = [{ wch: 22 }]; // Nome dipendente
     for (let i = 1; i <= daysInMonth; i++) {
-        colWidths.push({ wch: 5 }); // Giorni
+        colWidths.push({ wch: 18 }); // Giorni - larghezza maggiore per "8.5h (18:00-02:30)"
     }
-    colWidths.push({ wch: 10 }, { wch: 8 }, { wch: 8 }); // Totali
+    colWidths.push({ wch: 12 }, { wch: 10 }, { wch: 10 }); // Totali
     ws['!cols'] = colWidths;
     
     XLSX.utils.book_append_sheet(wb, ws, 'Resoconto');
