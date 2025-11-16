@@ -1682,6 +1682,124 @@ footer strong {
 
 /* ==================== STILI GESTIONE FERIE ==================== */
 
+/* Calendario ferie - stile mensile */
+.calendar-days-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    background: var(--bg-secondary);
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+
+.day-header {
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 8px 8px;
+}
+
+.calendar-day {
+    min-height: 100px;
+    padding: 8px;
+    background: var(--card-bg);
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.calendar-day.empty {
+    background: var(--bg-secondary);
+    opacity: 0.3;
+}
+
+.calendar-day.weekend {
+    background: var(--bg-secondary);
+}
+
+.calendar-day.today {
+    background: rgba(99, 102, 241, 0.1);
+    border: 2px solid var(--primary-color);
+}
+
+.calendar-day.holiday {
+    background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+}
+
+.calendar-day.holiday .day-number {
+    color: white;
+    font-weight: 700;
+}
+
+.day-number {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.holiday-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    margin-top: 4px;
+}
+
+.leave-requests {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.leave-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.leave-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.leave-badge.pending {
+    border-left: 3px solid #ffc107;
+}
+
+.leave-badge.approved {
+    border-left: 3px solid #4CAF50;
+}
+
+.leave-badge.rejected {
+    border-left: 3px solid #f44336;
+}
+
+.leave-icon {
+    font-size: 12px;
+}
+
+.leave-user {
+    font-weight: 600;
+    flex: 1;
+}
+
 /* Sezione richieste in attesa */
 #pendingRequestsSection {
     animation: slideDown 0.3s ease-out;

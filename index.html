@@ -469,35 +469,44 @@
     <div id="leaveCalendarModal" class="modal">
         <div class="modal-content" style="max-width: 1200px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0;">📅 Calendario Ferie Annuale</h3>
+                <h3 style="margin: 0;">📅 Calendario Ferie</h3>
                 <button id="closeLeaveCalendarModal" class="btn btn-secondary" style="display: flex; align-items: center; gap: 5px;">
                     <span>&times;</span>
                     <span>Chiudi</span>
                 </button>
             </div>
-            <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
-                <div>
-                    <label for="leaveCalendarYear" style="margin-right: 10px; font-weight: 500;">Anno:</label>
-                    <select id="leaveCalendarYear" class="form-control" style="display: inline-block; width: auto; padding: 8px;">
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
-                    </select>
-                </div>
-                <div id="leaveCalendarLegend" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: #f44336; border-radius: 4px;"></div>
-                        <span style="font-size: 14px;">Festività</span>
-                    </div>
+            
+            <!-- Navigation -->
+            <div class="calendar-header" style="margin-bottom: 20px;">
+                <button id="prevLeaveMonth" class="btn btn-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <h2 id="currentLeaveMonth"></h2>
+                <button id="nextLeaveMonth" class="btn btn-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Legend -->
+            <div id="leaveCalendarLegend" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 20px; height: 20px; background: #f44336; border-radius: 4px;"></div>
+                    <span style="font-size: 14px;">Festività</span>
                 </div>
             </div>
+            
+            <!-- Pending Requests Section -->
             <div id="pendingRequestsSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
                 <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Richieste in Attesa</h4>
                 <div id="pendingRequestsList"></div>
             </div>
-            <div id="leaveCalendarGrid" style="overflow-x: auto;">
-                <!-- Calendario annuale generato dinamicamente -->
-            </div>
+            
+            <!-- Calendar Grid -->
+            <div id="leaveCalendarGrid" class="calendar-grid"></div>
         </div>
     </div>
 

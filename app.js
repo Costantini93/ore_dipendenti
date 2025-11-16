@@ -2170,14 +2170,17 @@ function getHolidaysForYear(year) {
     return holidays;
 }
 
+// Stato calendario ferie
+let currentLeaveDate = new Date();
+
 // Inizializza gestori eventi ferie
 function initLeaveManagement() {
     const leaveCalendarBtn = document.getElementById('leaveCalendarBtn');
     const requestLeaveBtn = document.getElementById('requestLeaveBtn');
     const closeLeaveCalendarModal = document.getElementById('closeLeaveCalendarModal');
     const closeRequestLeaveModal = document.getElementById('closeRequestLeaveModal');
-    const leaveCalendarYear = document.getElementById('leaveCalendarYear');
-    const requestTypeRadios = document.querySelectorAll('input[name="requestType"]');
+    const prevLeaveMonth = document.getElementById('prevLeaveMonth');
+    const nextLeaveMonth = document.getElementById('nextLeaveMonth');
     
     if (leaveCalendarBtn) {
         leaveCalendarBtn.addEventListener('click', () => {
@@ -2208,8 +2211,16 @@ function initLeaveManagement() {
         });
     }
     
-    if (leaveCalendarYear) {
-        leaveCalendarYear.addEventListener('change', () => {
+    if (prevLeaveMonth) {
+        prevLeaveMonth.addEventListener('click', () => {
+            currentLeaveDate.setMonth(currentLeaveDate.getMonth() - 1);
+            renderLeaveCalendar();
+        });
+    }
+    
+    if (nextLeaveMonth) {
+        nextLeaveMonth.addEventListener('click', () => {
+            currentLeaveDate.setMonth(currentLeaveDate.getMonth() + 1);
             renderLeaveCalendar();
         });
     }
@@ -2232,21 +2243,26 @@ function initLeaveManagement() {
 // Apri calendario ferie
 function openLeaveCalendar() {
     const modal = document.getElementById('leaveCalendarModal');
-    const yearSelect = document.getElementById('leaveCalendarYear');
     
-    // Imposta anno corrente
-    yearSelect.value = new Date().getFullYear();
+    // Reset a mese corrente
+    currentLeaveDate = new Date();
     
     modal.style.display = 'flex';
     renderLeaveCalendar();
     renderPendingRequests();
 }
 
-// Renderizza calendario annuale
+// Renderizza calendario mensile ferie
 function renderLeaveCalendar() {
-    const year = parseInt(document.getElementById('leaveCalendarYear').value);
+    const year = currentLeaveDate.getFullYear();
+    const month = currentLeaveDate.getMonth();
     const container = document.getElementById('leaveCalendarGrid');
     const holidays = getHolidaysForYear(year);
+    
+    // Aggiorna titolo mese
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
+                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    document.getElementById('currentLeaveMonth').textContent = `${monthNames[month]} ${year}`;
     
     // Crea legenda dipendenti
     const legend = document.getElementById('leaveCalendarLegend');
@@ -2266,74 +2282,75 @@ function renderLeaveCalendar() {
         legend.appendChild(legendItem);
     });
     
-    // Crea tabella calendario
-    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
-    html += '<thead><tr style="background: #f5f5f5;"><th style="padding: 8px; border: 1px solid #ddd;">Mese</th>';
+    // Giorni della settimana
+    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     
-    // Giorni del mese (1-31)
-    for (let day = 1; day <= 31; day++) {
-        html += `<th style="padding: 4px; border: 1px solid #ddd; min-width: 30px;">${day}</th>`;
+    // Primo giorno del mese e numero giorni
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    // Costruisci griglia calendario
+    let html = '<div class="calendar-days-header">';
+    daysOfWeek.forEach(day => {
+        html += `<div class="day-header">${day}</div>`;
+    });
+    html += '</div><div class="calendar-days">';
+    
+    // Celle vuote per allineamento
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        html += '<div class="calendar-day empty"></div>';
     }
-    html += '</tr></thead><tbody>';
     
-    // Per ogni mese
-    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-    
-    for (let month = 0; month < 12; month++) {
-        html += `<tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; background: #fafafa;">${monthNames[month]}</td>`;
+    // Giorni del mese
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayOfWeek = date.getDay();
+        const isToday = dateStr === new Date().toISOString().split('T')[0];
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isHoliday = holidays[dateStr];
         
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        let dayClasses = 'calendar-day';
+        if (isToday) dayClasses += ' today';
+        if (isWeekend) dayClasses += ' weekend';
+        if (isHoliday) dayClasses += ' holiday';
         
-        for (let day = 1; day <= 31; day++) {
-            if (day > daysInMonth) {
-                html += '<td style="border: 1px solid #ddd; background: #f9f9f9;"></td>';
-            } else {
-                const date = new Date(year, month, day);
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayOfWeek = date.getDay();
-                
-                let cellStyle = 'padding: 4px; border: 1px solid #ddd; text-align: center; position: relative; min-height: 40px;';
-                let cellContent = '';
-                
-                // Weekend
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    cellStyle += ' background: #f5f5f5;';
-                }
-                
-                // Festività
-                if (holidays[dateStr]) {
-                    cellStyle += ' background: #f44336; color: white; font-weight: bold;';
-                    cellContent = `<div style="font-size: 10px;" title="${holidays[dateStr]}">🎉</div>`;
-                }
-                
-                // Richieste ferie
-                const requests = getLeaveRequestsForDate(dateStr);
-                if (requests.length > 0) {
-                    cellContent += '<div style="display: flex; flex-direction: column; gap: 2px;">';
-                    requests.forEach(req => {
-                        const user = DB.users[req.userId];
-                        const color = userColors[req.userId] || '#999';
-                        const opacity = req.status === 'approved' ? '0.8' : req.status === 'pending' ? '0.5' : '0.3';
-                        const icon = req.status === 'approved' ? '✓' : req.status === 'pending' ? '⏳' : '✗';
-                        
-                        cellContent += `
-                            <div style="background: ${color}; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; opacity: ${opacity};" 
-                                 title="${user.name} - ${req.status}">
-                                ${icon} ${user.name.split(' ')[0]}
-                            </div>
-                        `;
-                    });
-                    cellContent += '</div>';
-                }
-                
-                html += `<td style="${cellStyle}">${cellContent}</td>`;
-            }
+        html += `<div class="${dayClasses}">`;
+        html += `<div class="day-number">${day}</div>`;
+        
+        // Festività
+        if (isHoliday) {
+            html += `<div class="holiday-name">${holidays[dateStr]}</div>`;
         }
         
-        html += '</tr>';
+        // Richieste ferie
+        const requests = getLeaveRequestsForDate(dateStr);
+        if (requests.length > 0) {
+            html += '<div class="leave-requests">';
+            requests.forEach(req => {
+                const user = DB.users[req.userId];
+                const color = userColors[req.userId] || '#999';
+                const opacity = req.status === 'approved' ? '0.9' : req.status === 'pending' ? '0.6' : '0.4';
+                const icon = req.status === 'approved' ? '✓' : req.status === 'pending' ? '⏳' : '✗';
+                const statusClass = req.status === 'approved' ? 'approved' : req.status === 'pending' ? 'pending' : 'rejected';
+                
+                html += `
+                    <div class="leave-badge ${statusClass}" style="background: ${color}; opacity: ${opacity};" 
+                         title="${user.name} - ${req.status === 'approved' ? 'Approvato' : req.status === 'pending' ? 'In attesa' : 'Rifiutato'}">
+                        <span class="leave-icon">${icon}</span>
+                        <span class="leave-user">${user.name.split(' ')[0]}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+        
+        html += '</div>';
     }
     
-    html += '</tbody></table>';
+    html += '</div>';
     container.innerHTML = html;
 }
 
