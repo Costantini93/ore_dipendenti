@@ -513,44 +513,13 @@
                 </button>
             </div>
             <form id="requestLeaveForm" class="time-form">
-                <div class="form-group">
-                    <label>Tipo Richiesta</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="requestType" value="period" checked>
-                            <span>Periodo Continuo</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="requestType" value="single">
-                            <span>Giorni Singoli</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div id="periodInputs">
+                <div id="singleDayInputs">
                     <div class="form-group">
-                        <label for="leaveStartDate">Data Inizio</label>
-                        <input type="date" id="leaveStartDate" name="leaveStartDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="leaveEndDate">Data Fine</label>
-                        <input type="date" id="leaveEndDate" name="leaveEndDate" required>
-                    </div>
-                </div>
-
-                <div id="singleDayInputs" style="display: none;">
-                    <div class="form-group">
-                        <label for="leaveSingleDates">Seleziona Date (Ctrl/Cmd + Click per selezioni multiple)</label>
+                        <label for="leaveSingleDates">Seleziona Giorni (Ctrl/Cmd + Click per selezioni multiple)</label>
                         <div id="datePickerContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px;">
                             <!-- Date picker generato dinamicamente -->
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="leaveHoursPerDay">Ore per Giorno</label>
-                    <input type="number" id="leaveHoursPerDay" name="leaveHoursPerDay" value="8" min="0.5" max="8" step="0.5" required>
-                    <small style="color: #666;">Inserisci le ore di ferie per ogni giorno (es: 8 per giornata intera, 4 per mezza giornata)</small>
                 </div>
 
                 <div class="form-group">
@@ -560,7 +529,7 @@
 
                 <div class="info-box" style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #2196F3;">
                     <p style="margin: 0; font-size: 13px; color: #1976D2;" id="leaveRequestInfo">
-                        Seleziona le date per vedere il riepilogo
+                        Seleziona i giorni per vedere il riepilogo
                     </p>
                 </div>
 

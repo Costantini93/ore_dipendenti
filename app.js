@@ -2214,46 +2214,11 @@ function initLeaveManagement() {
         });
     }
     
-    // Gestione tipo richiesta
-    requestTypeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            const periodInputs = document.getElementById('periodInputs');
-            const singleDayInputs = document.getElementById('singleDayInputs');
-            const startDateInput = document.getElementById('leaveStartDate');
-            const endDateInput = document.getElementById('leaveEndDate');
-            
-            if (e.target.value === 'period') {
-                periodInputs.style.display = 'block';
-                singleDayInputs.style.display = 'none';
-                // Aggiungi required per periodo
-                startDateInput.setAttribute('required', '');
-                endDateInput.setAttribute('required', '');
-            } else {
-                periodInputs.style.display = 'none';
-                singleDayInputs.style.display = 'block';
-                // Rimuovi required per giorni singoli
-                startDateInput.removeAttribute('required');
-                endDateInput.removeAttribute('required');
-                renderDatePicker();
-            }
-            updateLeaveRequestInfo();
-        });
-    });
-    
     // Gestione form richiesta
     const requestLeaveForm = document.getElementById('requestLeaveForm');
     if (requestLeaveForm) {
         requestLeaveForm.addEventListener('submit', handleLeaveRequest);
     }
-    
-    // Aggiorna info quando cambiano le date
-    const leaveStartDate = document.getElementById('leaveStartDate');
-    const leaveEndDate = document.getElementById('leaveEndDate');
-    const leaveHoursPerDay = document.getElementById('leaveHoursPerDay');
-    
-    if (leaveStartDate) leaveStartDate.addEventListener('change', updateLeaveRequestInfo);
-    if (leaveEndDate) leaveEndDate.addEventListener('change', updateLeaveRequestInfo);
-    if (leaveHoursPerDay) leaveHoursPerDay.addEventListener('input', updateLeaveRequestInfo);
     
     // Annulla richiesta
     const cancelRequestLeaveBtn = document.getElementById('cancelRequestLeaveBtn');
@@ -2629,24 +2594,8 @@ function openRequestLeaveModal() {
     const form = document.getElementById('requestLeaveForm');
     form.reset();
     
-    // Imposta date minime (oggi)
-    const today = new Date().toISOString().split('T')[0];
-    const startDateInput = document.getElementById('leaveStartDate');
-    const endDateInput = document.getElementById('leaveEndDate');
-    
-    startDateInput.min = today;
-    endDateInput.min = today;
-    
-    // Reset visualizzazione - default è periodo
-    document.getElementById('periodInputs').style.display = 'block';
-    document.getElementById('singleDayInputs').style.display = 'none';
-    
-    // Assicurati che required sia impostato per periodo (default)
-    startDateInput.setAttribute('required', '');
-    endDateInput.setAttribute('required', '');
-    
-    // Seleziona il radio "periodo" come default
-    document.querySelector('input[name="requestType"][value="period"]').checked = true;
+    // Renderizza date picker
+    renderDatePicker();
     
     modal.style.display = 'flex';
     updateLeaveRequestInfo();
@@ -2681,27 +2630,14 @@ function renderDatePicker() {
 }
 
 // Aggiorna info richiesta
+// Aggiorna info richiesta
 function updateLeaveRequestInfo() {
-    const requestType = document.querySelector('input[name="requestType"]:checked').value;
-    const hoursPerDay = parseFloat(document.getElementById('leaveHoursPerDay').value) || 8;
+    const hoursPerDay = 8; // Sempre giornata intera
     const infoBox = document.getElementById('leaveRequestInfo');
     
-    let totalDays = 0;
-    let totalHours = 0;
-    
-    if (requestType === 'period') {
-        const startDate = document.getElementById('leaveStartDate').value;
-        const endDate = document.getElementById('leaveEndDate').value;
-        
-        if (startDate && endDate) {
-            totalDays = calculateBusinessDays(startDate, endDate);
-            totalHours = totalDays * hoursPerDay;
-        }
-    } else {
-        const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'));
-        totalDays = selectedDates.length;
-        totalHours = totalDays * hoursPerDay;
-    }
+    const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'));
+    const totalDays = selectedDates.length;
+    const totalHours = totalDays * hoursPerDay;
     
     if (totalDays > 0) {
         const currentUserData = DB.users[currentUser.username];
@@ -2709,14 +2645,14 @@ function updateLeaveRequestInfo() {
         
         infoBox.innerHTML = `
             <strong>📊 Riepilogo Richiesta:</strong><br>
-            • Giorni lavorativi: ${totalDays}<br>
-            • Ore totali: ${totalHours}h<br>
+            • Giorni selezionati: ${totalDays}<br>
+            • Ore totali: ${totalHours}h (${totalDays} ${totalDays === 1 ? 'giornata intera' : 'giornate intere'})<br>
             • Ferie residue attuali: ${currentUserData.ferieResidue.toFixed(2)}h<br>
             • Ferie residue dopo approvazione: <strong style="color: ${remaining >= 0 ? '#4CAF50' : '#f44336'}">${remaining.toFixed(2)}h</strong>
             ${remaining < 0 ? '<br><br>⚠️ <strong>Attenzione:</strong> Non hai abbastanza ferie disponibili!' : ''}
         `;
     } else {
-        infoBox.innerHTML = 'Seleziona le date per vedere il riepilogo';
+        infoBox.innerHTML = 'Seleziona i giorni per vedere il riepilogo';
     }
 }
 
@@ -2737,54 +2673,33 @@ function calculateBusinessDays(startDate, endDate) {
 }
 
 // Gestione invio richiesta ferie
+// Gestione invio richiesta ferie
 async function handleLeaveRequest(e) {
     e.preventDefault();
     
-    const requestType = document.querySelector('input[name="requestType"]:checked').value;
-    const hoursPerDay = parseFloat(document.getElementById('leaveHoursPerDay').value);
+    const hoursPerDay = 8; // Sempre giornata intera
     const notes = document.getElementById('leaveNotes').value;
+    
+    const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'))
+        .map(cb => cb.value);
+    
+    if (selectedDates.length === 0) {
+        alert('Seleziona almeno un giorno');
+        return;
+    }
     
     let request = {
         userId: currentUser.username,
-        type: requestType,
+        type: 'single',
         hoursPerDay,
         notes,
         status: 'pending',
-        requestDate: new Date().toISOString()
+        requestDate: new Date().toISOString(),
+        dates: selectedDates
     };
     
-    if (requestType === 'period') {
-        const startDate = document.getElementById('leaveStartDate').value;
-        const endDate = document.getElementById('leaveEndDate').value;
-        
-        if (!startDate || !endDate) {
-            alert('Seleziona le date di inizio e fine');
-            return;
-        }
-        
-        if (new Date(startDate) > new Date(endDate)) {
-            alert('La data di inizio deve essere precedente alla data di fine');
-            return;
-        }
-        
-        request.startDate = startDate;
-        request.endDate = endDate;
-    } else {
-        const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'))
-            .map(cb => cb.value);
-        
-        if (selectedDates.length === 0) {
-            alert('Seleziona almeno una data');
-            return;
-        }
-        
-        request.dates = selectedDates;
-    }
-    
     // Verifica saldo ferie
-    const totalHours = requestType === 'period'
-        ? calculateBusinessDays(request.startDate, request.endDate) * hoursPerDay
-        : request.dates.length * hoursPerDay;
+    const totalHours = selectedDates.length * hoursPerDay;
     
     if (DB.users[currentUser.username].ferieResidue < totalHours) {
         if (!confirm('Non hai abbastanza ferie disponibili. Vuoi procedere comunque con la richiesta?')) {
