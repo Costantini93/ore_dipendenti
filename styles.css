@@ -2231,3 +2231,19 @@ body.dark-mode [style*="color: #856404"] {
 body.dark-mode footer [style*="color: #000"] {
     color: var(--text-primary) !important;
 }
+
+/* Dark mode - Badge richieste ferie */
+body.dark-mode .leave-status-badge.pending {
+    background: #6b5416;
+    color: #ffd93d;
+}
+
+body.dark-mode .leave-status-badge.approved {
+    background: #1a5a2e;
+    color: #7ed6a8;
+}
+
+body.dark-mode .leave-status-badge.rejected {
+    background: #5a1a1a;
+    color: #ff8a8a;
+}

@@ -2503,6 +2503,29 @@ async function handleLeaveApproval(requestId, approved) {
     if (!DB.leaveRequests || !DB.leaveRequests[requestId]) return;
     
     const request = DB.leaveRequests[requestId];
+    
+    // Se approvato, controlla duplicati
+    if (approved && request.type === 'single') {
+        // Controlla se qualche giorno è già approvato
+        const duplicates = [];
+        for (const dateStr of request.dates) {
+            const existingApproved = Object.values(DB.leaveRequests).some(req => 
+                req.userId === request.userId && 
+                req.status === 'approved' && 
+                req.id !== requestId && 
+                (req.approvedDates?.includes(dateStr) || (req.type === 'period' && isDateInRange(dateStr, req.startDate, req.endDate)))
+            );
+            if (existingApproved) {
+                duplicates.push(formatDate(dateStr));
+            }
+        }
+        
+        if (duplicates.length > 0) {
+            alert(`I seguenti giorni sono già approvati per questo dipendente:\n${duplicates.join('\n')}\n\nApprova i giorni singolarmente per evitare duplicati.`);
+            return;
+        }
+    }
+    
     request.status = approved ? 'approved' : 'rejected';
     request.approvedBy = currentUser.username;
     request.approvedDate = new Date().toISOString();
@@ -2594,6 +2617,19 @@ async function approveSingleDay(requestId, dateStr) {
     const request = DB.leaveRequests[requestId];
     if (!request.approvedDates) request.approvedDates = [];
     if (!request.rejectedDates) request.rejectedDates = [];
+    
+    // Controlla se il giorno è già stato approvato per questo utente
+    const existingApproved = Object.values(DB.leaveRequests).some(req => 
+        req.userId === request.userId && 
+        req.status === 'approved' && 
+        req.id !== requestId && 
+        (req.approvedDates?.includes(dateStr) || (req.type === 'period' && isDateInRange(dateStr, req.startDate, req.endDate)))
+    );
+    
+    if (existingApproved) {
+        alert(`Il giorno ${formatDate(dateStr)} è già stato approvato per questo dipendente in un'altra richiesta!`);
+        return;
+    }
     
     request.approvedDates.push(dateStr);
     
@@ -2958,6 +2994,14 @@ function formatDate(dateStr) {
     const date = new Date(dateStr);
     const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('it-IT', options);
+}
+
+// Controlla se una data è in un intervallo
+function isDateInRange(dateStr, startDate, endDate) {
+    const date = new Date(dateStr);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return date >= start && date <= end;
 }
 
 // ==================== SISTEMA CENTRO NOTIFICHE ====================
