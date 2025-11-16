@@ -25,5 +25,6 @@ const database = firebase.database();
 const dbRef = {
     users: database.ref('users'),
     timeEntries: database.ref('timeEntries'),
-    leaveRequests: database.ref('leaveRequests')
+    leaveRequests: database.ref('leaveRequests'),
+    notifications: database.ref('notifications')
 };

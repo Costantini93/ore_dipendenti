@@ -2118,3 +2118,62 @@ footer strong {
 .leave-calendar-cell:hover .calendar-cell-tooltip {
     opacity: 1;
 }
+
+/* ==================== CENTRO NOTIFICHE ==================== */
+
+#notificationCenterBtn {
+    position: relative;
+}
+
+#notificationBadge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.notification-card {
+    transition: all 0.2s ease;
+}
+
+.notification-card:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+.notification-card.unread {
+    border-left-width: 5px !important;
+}
+
+.notification-card.read {
+    opacity: 0.7;
+}
+
+/* Filtri notifiche */
+[id^="filter"].active {
+    background: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* Responsive notifiche */
+@media (max-width: 768px) {
+    #notificationCenterModal .modal-content {
+        max-width: 95vw !important;
+        padding: 15px;
+    }
+    
+    .notification-card {
+        padding: 12px !important;
+    }
+    
+    [id^="filter"] {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+    }
+}

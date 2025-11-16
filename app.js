@@ -56,7 +56,8 @@ const DB = {
             rolResidui: 120
         }
     },
-    timeEntries: {} // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
+    timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
+    notifications: {} // Formato: { notificationId: { userId, type, title, message, timestamp, read, data } }
 };
 
 // Stato dell'applicazione
@@ -733,6 +734,9 @@ function initializeApp() {
 
     // Inizializza sistema gestione ferie
     initLeaveManagement();
+    
+    // Inizializza centro notifiche
+    initNotificationCenter();
     
     // Programma controlli automatici ferie e timbrature
     scheduleLeaveChecks();
@@ -2955,3 +2959,325 @@ function formatDate(dateStr) {
     const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('it-IT', options);
 }
+
+// ==================== SISTEMA CENTRO NOTIFICHE ====================
+
+let currentNotificationFilter = 'all';
+
+// Inizializza centro notifiche
+function initNotificationCenter() {
+    const notificationCenterBtn = document.getElementById('notificationCenterBtn');
+    const closeNotificationCenter = document.getElementById('closeNotificationCenter');
+    const markAllReadBtn = document.getElementById('markAllReadBtn');
+    const clearAllNotificationsBtn = document.getElementById('clearAllNotificationsBtn');
+    
+    if (notificationCenterBtn) {
+        notificationCenterBtn.addEventListener('click', openNotificationCenter);
+    }
+    
+    if (closeNotificationCenter) {
+        closeNotificationCenter.addEventListener('click', () => {
+            document.getElementById('notificationCenterModal').style.display = 'none';
+        });
+    }
+    
+    if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', markAllNotificationsRead);
+    }
+    
+    if (clearAllNotificationsBtn) {
+        clearAllNotificationsBtn.addEventListener('click', clearAllNotifications);
+    }
+    
+    // Filtri notifiche
+    document.getElementById('filterAllNotifications')?.addEventListener('click', () => filterNotifications('all'));
+    document.getElementById('filterLeaveNotifications')?.addEventListener('click', () => filterNotifications('leave'));
+    document.getElementById('filterTimeNotifications')?.addEventListener('click', () => filterNotifications('time'));
+    document.getElementById('filterSystemNotifications')?.addEventListener('click', () => filterNotifications('system'));
+    
+    // Carica notifiche da Firebase
+    loadNotificationsFromFirebase();
+    
+    // Aggiorna badge
+    updateNotificationBadge();
+}
+
+// Carica notifiche da Firebase
+function loadNotificationsFromFirebase() {
+    if (typeof dbRef !== 'undefined' && dbRef.notifications) {
+        dbRef.notifications.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                DB.notifications = data;
+                updateNotificationBadge();
+                
+                // Se il centro è aperto, aggiorna
+                if (document.getElementById('notificationCenterModal').style.display === 'flex') {
+                    renderNotifications();
+                }
+            } else {
+                DB.notifications = {};
+            }
+        });
+    }
+}
+
+// Crea nuova notifica
+async function createNotification(userId, type, title, message, data = {}) {
+    const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const notification = {
+        userId,
+        type, // 'leave', 'time', 'system'
+        title,
+        message,
+        timestamp: new Date().toISOString(),
+        read: false,
+        data
+    };
+    
+    if (!DB.notifications) {
+        DB.notifications = {};
+    }
+    
+    DB.notifications[notificationId] = notification;
+    
+    // Salva su Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.notifications.child(notificationId).set(notification);
+    }
+    
+    // Aggiorna badge
+    updateNotificationBadge();
+    
+    // Invia notifica push se disponibile
+    if (Notification.permission === 'granted' && userId === currentUser?.username) {
+        showLocalNotification(title, message);
+    }
+}
+
+// Apri centro notifiche
+function openNotificationCenter() {
+    const modal = document.getElementById('notificationCenterModal');
+    modal.style.display = 'flex';
+    currentNotificationFilter = 'all';
+    renderNotifications();
+}
+
+// Renderizza notifiche
+function renderNotifications() {
+    if (!currentUser) return;
+    
+    const container = document.getElementById('notificationsList');
+    const emptyState = document.getElementById('emptyNotifications');
+    
+    // Filtra notifiche per utente corrente
+    const userNotifications = Object.keys(DB.notifications || {})
+        .map(id => ({ id, ...DB.notifications[id] }))
+        .filter(notif => notif.userId === currentUser.username)
+        .filter(notif => {
+            if (currentNotificationFilter === 'all') return true;
+            return notif.type === currentNotificationFilter;
+        })
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (userNotifications.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    emptyState.style.display = 'none';
+    
+    let html = '';
+    
+    userNotifications.forEach(notif => {
+        const typeIcon = notif.type === 'leave' ? '🏖️' : notif.type === 'time' ? '⏰' : '⚙️';
+        const typeColor = notif.type === 'leave' ? '#FF9800' : notif.type === 'time' ? '#2196F3' : '#9C27B0';
+        const readClass = notif.read ? 'read' : 'unread';
+        const readBadge = notif.read ? '' : '<span style="width: 8px; height: 8px; background: #2196F3; border-radius: 50%; display: inline-block;"></span>';
+        
+        const time = formatNotificationTime(notif.timestamp);
+        
+        html += `
+            <div class="notification-card ${readClass}" style="padding: 15px; background: ${notif.read ? '#f8fafc' : 'white'}; border-radius: 8px; border-left: 4px solid ${typeColor}; cursor: pointer; transition: all 0.2s ease;" 
+                 onclick="markNotificationRead('${notif.id}')">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;">${typeIcon}</span>
+                        <strong style="color: var(--text-primary);">${notif.title}</strong>
+                        ${readBadge}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 12px; color: #999;">${time}</span>
+                        <button onclick="event.stopPropagation(); deleteNotification('${notif.id}')" style="background: none; border: none; color: #999; cursor: pointer; padding: 4px;" title="Elimina">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #666; line-height: 1.5;">${notif.message}</p>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Aggiorna stato filtri
+    document.querySelectorAll('[id^="filter"]').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`filter${currentNotificationFilter.charAt(0).toUpperCase() + currentNotificationFilter.slice(1)}Notifications`)?.classList.add('active');
+}
+
+// Filtra notifiche
+function filterNotifications(type) {
+    currentNotificationFilter = type;
+    renderNotifications();
+}
+
+// Segna notifica come letta
+async function markNotificationRead(notificationId) {
+    if (!DB.notifications[notificationId]) return;
+    
+    DB.notifications[notificationId].read = true;
+    
+    // Salva su Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.notifications.child(notificationId).child('read').set(true);
+    }
+    
+    renderNotifications();
+    updateNotificationBadge();
+}
+
+// Segna tutte come lette
+async function markAllNotificationsRead() {
+    if (!currentUser) return;
+    
+    const userNotifications = Object.keys(DB.notifications || {})
+        .filter(id => DB.notifications[id].userId === currentUser.username);
+    
+    for (const notifId of userNotifications) {
+        DB.notifications[notifId].read = true;
+        
+        if (typeof dbRef !== 'undefined') {
+            await dbRef.notifications.child(notifId).child('read').set(true);
+        }
+    }
+    
+    renderNotifications();
+    updateNotificationBadge();
+}
+
+// Cancella notifica
+async function deleteNotification(notificationId) {
+    if (!DB.notifications[notificationId]) return;
+    
+    delete DB.notifications[notificationId];
+    
+    // Cancella da Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.notifications.child(notificationId).remove();
+    }
+    
+    renderNotifications();
+    updateNotificationBadge();
+}
+
+// Cancella tutte le notifiche
+async function clearAllNotifications() {
+    if (!currentUser) return;
+    
+    if (!confirm('Sei sicuro di voler cancellare tutte le notifiche?')) return;
+    
+    const userNotifications = Object.keys(DB.notifications || {})
+        .filter(id => DB.notifications[id].userId === currentUser.username);
+    
+    for (const notifId of userNotifications) {
+        delete DB.notifications[notifId];
+        
+        if (typeof dbRef !== 'undefined') {
+            await dbRef.notifications.child(notifId).remove();
+        }
+    }
+    
+    renderNotifications();
+    updateNotificationBadge();
+}
+
+// Aggiorna badge notifiche
+function updateNotificationBadge() {
+    if (!currentUser) return;
+    
+    const badge = document.getElementById('notificationBadge');
+    if (!badge) return;
+    
+    const unreadCount = Object.keys(DB.notifications || {})
+        .filter(id => DB.notifications[id].userId === currentUser.username && !DB.notifications[id].read)
+        .length;
+    
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// Formatta tempo notifica (es: "5 minuti fa", "2 ore fa", "3 giorni fa")
+function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Ora';
+    if (diffMins < 60) return `${diffMins} min fa`;
+    if (diffHours < 24) return `${diffHours}h fa`;
+    if (diffDays < 7) return `${diffDays}g fa`;
+    
+    return time.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+}
+
+// Modifica le funzioni esistenti per inviare notifiche
+
+// Quando admin approva/rifiuta ferie (modifica handleLeaveApproval)
+const originalSendLeaveNotification = sendLeaveNotification;
+sendLeaveNotification = function(userId, status, request, specificDate = null) {
+    const title = status === 'approved' ? '✅ Ferie Approvate' : '❌ Ferie Rifiutate';
+    let message = '';
+    
+    if (specificDate) {
+        message = `La tua richiesta per il ${formatDate(specificDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    } else if (request.type === 'period') {
+        message = `La tua richiesta dal ${formatDate(request.startDate)} al ${formatDate(request.endDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    } else {
+        message = `La tua richiesta per ${request.dates.length} giorn${request.dates.length === 1 ? 'o' : 'i'} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    }
+    
+    createNotification(userId, 'leave', title, message, { requestId: request.id || 'unknown', status });
+    originalSendLeaveNotification(userId, status, request, specificDate);
+};
+
+// Quando dipendente richiede ferie (modifica sendLeaveNotificationToAdmins)
+const originalSendLeaveNotificationToAdmins = sendLeaveNotificationToAdmins;
+sendLeaveNotificationToAdmins = function(request) {
+    const user = DB.users[request.userId];
+    
+    Object.keys(DB.users).forEach(username => {
+        if (DB.users[username].role === 'admin') {
+            createNotification(
+                username,
+                'leave',
+                '🏖️ Nuova Richiesta Ferie',
+                `${user.name} ha richiesto ferie. Controlla il calendario per approvarle.`,
+                { requestId: request.id || 'unknown', userId: request.userId }
+            );
+        }
+    });
+    
+    originalSendLeaveNotificationToAdmins(request);
+};

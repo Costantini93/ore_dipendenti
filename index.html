@@ -87,6 +87,12 @@
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" fill="currentColor"/>
                         </svg>
                     </button>
+                    <button id="notificationCenterBtn" class="btn btn-icon" title="Centro Notifiche">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span id="notificationBadge" style="display: none; position: absolute; top: 8px; right: 8px; background: #f44336; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;"></span>
+                    </button>
                     <button id="usersManagementBtn" class="btn btn-icon" title="Gestione Utenti" style="display: none;">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -100,6 +106,8 @@
                     <button id="notificationsBtn" class="btn btn-icon" title="Attiva Notifiche" style="display: none;">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="18" cy="6" r="3" fill="currentColor"/>
+                            <path d="M18 5v2M17 6h2" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>
                     </button>
                     <button id="changePasswordBtn" class="btn btn-icon" title="Cambia Password">
@@ -461,6 +469,42 @@
             </div>
             <div id="holidaysList" style="max-height: 500px; overflow-y: auto;">
                 <!-- Lista festività generata dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Center Modal -->
+    <div id="notificationCenterModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>🔔 Centro Notifiche</h3>
+                <button class="modal-close" id="closeNotificationCenter">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 8px;">
+                <span style="font-size: 14px; color: #666;">Filtra per tipo:</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="filterAllNotifications" class="btn btn-secondary active" style="padding: 6px 12px; font-size: 12px;">Tutte</button>
+                    <button id="filterLeaveNotifications" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">🏖️ Ferie</button>
+                    <button id="filterTimeNotifications" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">⏰ Ore</button>
+                    <button id="filterSystemNotifications" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">⚙️ Sistema</button>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 15px;">
+                <button id="markAllReadBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">✓ Segna tutte lette</button>
+                <button id="clearAllNotificationsBtn" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">🗑️ Cancella tutte</button>
+            </div>
+            <div id="notificationsList" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Notifiche generate dinamicamente -->
+            </div>
+            <div id="emptyNotifications" style="display: none; text-align: center; padding: 40px; color: #999;">
+                <svg viewBox="0 0 24 24" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 15px; opacity: 0.3;">
+                    <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p style="font-size: 16px; margin: 0;">Nessuna notifica</p>
             </div>
         </div>
     </div>
