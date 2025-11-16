@@ -217,7 +217,7 @@ async function checkAndAddMonthlyLeave() {
                 const newFerie = currentFerie + monthlyFerieHours;
                 
                 const currentRol = user.rolResidui || 0;
-                const newRol = currentRol + monthlyRolHours;
+                const newRol = parseFloat((currentRol + monthlyRolHours).toFixed(2));
                 
                 // Aggiorna Firebase
                 await database.ref(`users/${username}`).update({
@@ -229,7 +229,7 @@ async function checkAndAddMonthlyLeave() {
                 DB.users[username].ferieResidue = newFerie;
                 DB.users[username].rolResidui = newRol;
                 
-                console.log(`✅ ${username} (${contractType}): Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(1)} → ${newRol.toFixed(1)})`);
+                console.log(`✅ ${username} (${contractType}): Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(2)} → ${newRol.toFixed(2)})`);
             }
             
             // Salva l'ultimo mese processato
@@ -559,7 +559,7 @@ function initApp() {
             const role = document.getElementById('userRole').value;
             const contractType = document.getElementById('userContractType').value;
             const ferieResidue = parseFloat(document.getElementById('userFerie').value);
-            const rolResidui = parseFloat(document.getElementById('userRol').value);
+            const rolResidui = parseFloat(parseFloat(document.getElementById('userRol').value).toFixed(2));
 
             // Validazione username non vuoto
             if (!username) {
@@ -750,7 +750,7 @@ function updateLeaveBalance() {
     const ferieOre = user.ferieResidue || 0;
     const ferieGiorni = (ferieOre / 8).toFixed(1); // Converti ore in giorni
     document.getElementById('ferieResidue').textContent = `${ferieGiorni} gg`;
-    document.getElementById('rolResidui').textContent = `${user.rolResidui || 0}h`;
+    document.getElementById('rolResidui').textContent = `${(user.rolResidui || 0).toFixed(2)}h`;
 }
 
 // Render users list for admin
@@ -776,7 +776,7 @@ function renderUsersList() {
                         <span class="user-badge badge-${user.role}">${user.role === 'admin' ? 'Admin' : 'Dipendente'}</span>
                     </div>
                     <div class="user-meta">
-                        @${username} • Ferie: ${ferieGiorni}gg • ROL: ${user.rolResidui || 0}h
+                        @${username} • Ferie: ${ferieGiorni}gg • ROL: ${(user.rolResidui || 0).toFixed(2)}h
                     </div>
                 </div>
             </div>
@@ -1217,7 +1217,7 @@ function saveTimeEntry() {
         }
         if (oldEntry.type === 'rol' && dayType !== 'rol') {
             // Ripristina 8 ore (1 giorno)
-            user.rolResidui = (user.rolResidui || 0) + 8;
+            user.rolResidui = parseFloat(((user.rolResidui || 0) + 8).toFixed(2));
         }
     }
     
@@ -1232,9 +1232,9 @@ function saveTimeEntry() {
     
     if (dayType === 'rol') {
         if ((user.rolResidui || 0) < 8) {
-            alert(`⚠️ Attenzione: hai solo ${user.rolResidui || 0} ore di ROL disponibili!`);
+            alert(`⚠️ Attenzione: hai solo ${(user.rolResidui || 0).toFixed(2)} ore di ROL disponibili!`);
         }
-        user.rolResidui = Math.max(0, (user.rolResidui || 0) - 8);
+        user.rolResidui = parseFloat(Math.max(0, (user.rolResidui || 0) - 8).toFixed(2));
     }
 
     DB.timeEntries[viewingUser][dateStr] = entry;
