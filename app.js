@@ -663,13 +663,6 @@ function initApp() {
 
     // Dark Mode Toggle
     document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
-
-    // Notifications Toggle
-    const notificationsBtn = document.getElementById('notificationsBtn');
-    if (notificationsBtn) {
-        notificationsBtn.addEventListener('click', requestNotificationPermission);
-    }
-
     // Selezione utente per admin
     document.getElementById('userSelect').addEventListener('change', (e) => {
         selectedUser = e.target.value;
@@ -2097,19 +2090,14 @@ function scheduleDailyNotifications() {
     checkNotification();
 }
 
-// Inizializza notifiche se abilitate
+// Inizializza notifiche se abilitate (per futura app nativa)
 function initNotifications() {
     const notificationsEnabled = localStorage.getItem('notificationsEnabled');
-    const notificationsBtn = document.getElementById('notificationsBtn');
     
-    if (notificationsBtn) {
-        notificationsBtn.style.display = 'inline-flex';
-        
-        if (notificationsEnabled === 'true' && Notification.permission === 'granted') {
-            scheduleDailyNotifications();
-            notificationsBtn.style.opacity = '0.5';
-            notificationsBtn.title = 'Notifiche Attive';
-        }
+    // Per app native, le notifiche saranno gestite dal sistema operativo
+    // Questo codice rimane per compatibilità con versione web/PWA
+    if (notificationsEnabled === 'true' && Notification.permission === 'granted') {
+        scheduleDailyNotifications();
     }
 }
 
