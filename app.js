@@ -573,17 +573,25 @@ function initApp() {
                 }
                 
                 console.log('Tentativo di salvataggio:', targetUsername, userData);
-                await database.ref(`users/${targetUsername}`).update(userData);
+                
+                // Usa .set() per nuovi utenti e .update() per utenti esistenti
+                if (!editUserId) {
+                    // Nuovo utente - usa .set() per creare il nodo
+                    await database.ref(`users/${targetUsername}`).set(userData);
+                } else {
+                    // Utente esistente - usa .update() per modificare
+                    await database.ref(`users/${targetUsername}`).update(userData);
+                }
+                
                 console.log('Salvataggio completato con successo');
                 
                 // Aggiorna DB locale
                 if (!DB.users[targetUsername]) {
-                    DB.users[targetUsername] = {};
+                    DB.users[targetUsername] = {
+                        username: targetUsername
+                    };
                 }
                 Object.assign(DB.users[targetUsername], userData);
-                if (!editUserId) {
-                    DB.users[targetUsername].username = targetUsername;
-                }
 
                 // Aggiorna lista utenti se admin
                 if (currentUser.role === 'admin') {
