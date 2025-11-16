@@ -1096,12 +1096,14 @@ function openTimeModal(dateStr, existingEntry) {
     }
 
     toggleTimeInputs();
+    modal.style.display = 'flex';
     modal.classList.add('show');
 }
 
 function closeModal() {
     const modal = document.getElementById('timeModal');
     modal.classList.remove('show');
+    modal.style.display = 'none';
     document.getElementById('timeForm').reset();
     
     // Ripristina il tipo default a "work"
