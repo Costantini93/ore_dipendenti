@@ -1632,6 +1632,16 @@ body.dark-mode #holidayYearSelect {
     background: var(--bg-secondary);
 }
 
+/* Dark mode - Celle festività e ROL */
+body.dark-mode .holiday-cell,
+body.dark-mode .holiday-cell .cell-label {
+    color: #1a1a1a;
+}
+
+body.dark-mode .rol-cell {
+    color: #1a1a1a;
+}
+
 /* Footer */
 footer {
     background: rgba(0, 0, 0, 0.1);
@@ -2176,4 +2186,18 @@ footer strong {
         font-size: 10px !important;
         padding: 4px 8px !important;
     }
+}
+
+/* ==================== DARK MODE - TESTI ==================== */
+
+/* Testi inline scuri in dark mode */
+body.dark-mode [style*="color: #000"],
+body.dark-mode [style*="color: #666"],
+body.dark-mode [style*="color: #999"],
+body.dark-mode [style*="color: #856404"] {
+    color: var(--text-secondary) !important;
+}
+
+body.dark-mode footer [style*="color: #000"] {
+    color: var(--text-primary) !important;
 }
