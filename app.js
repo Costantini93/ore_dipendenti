@@ -131,6 +131,21 @@ async function loadDataFromStorage() {
                 }
             }
         });
+        
+        // Carica leaveRequests da Firebase con listener real-time
+        dbRef.leaveRequests.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                DB.leaveRequests = data;
+                // Aggiorna calendario ferie se aperto
+                if (document.getElementById('leaveCalendarModal').style.display === 'flex') {
+                    renderLeaveCalendar();
+                    renderPendingRequests();
+                }
+            } else {
+                DB.leaveRequests = {};
+            }
+        });
     }
 }
 
@@ -715,6 +730,12 @@ function initializeApp() {
 
     // Inizializza notifiche
     initNotifications();
+
+    // Inizializza sistema gestione ferie
+    initLeaveManagement();
+    
+    // Programma controlli automatici ferie e timbrature
+    scheduleLeaveChecks();
 
     switchView('calendar');
 }
@@ -2076,4 +2097,817 @@ function initNotifications() {
             notificationsBtn.title = 'Notifiche Attive';
         }
     }
+}
+
+// ==================== SISTEMA GESTIONE FERIE ====================
+
+// Colori unici per ogni dipendente
+const userColors = {
+    'alessandro_costantini': '#2196F3',
+    'denise_raimondi': '#E91E63',
+    'sandy_oduro': '#FF9800',
+    'luca_avesani': '#4CAF50',
+    'sophie_rizzin': '#9C27B0',
+    'sofia_bilianska': '#00BCD4'
+};
+
+// Festività italiane fisse
+const italianHolidays = {
+    '01-01': 'Capodanno',
+    '01-06': 'Epifania',
+    '04-25': 'Festa della Liberazione',
+    '05-01': 'Festa del Lavoro',
+    '06-02': 'Festa della Repubblica',
+    '08-15': 'Ferragosto',
+    '11-01': 'Tutti i Santi',
+    '12-08': 'Immacolata Concezione',
+    '12-25': 'Natale',
+    '12-26': 'Santo Stefano'
+};
+
+// Calcolo Pasqua e Lunedì dell'Angelo (algoritmo di Gauss)
+function getEasterDate(year) {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    
+    const easter = new Date(year, month - 1, day);
+    const easterMonday = new Date(easter);
+    easterMonday.setDate(easterMonday.getDate() + 1);
+    
+    return { easter, easterMonday };
+}
+
+// Ottieni tutte le festività per un anno
+function getHolidaysForYear(year) {
+    const holidays = {};
+    
+    // Festività fisse
+    Object.keys(italianHolidays).forEach(key => {
+        const dateStr = `${year}-${key}`;
+        holidays[dateStr] = italianHolidays[key];
+    });
+    
+    // Pasqua e Lunedì dell'Angelo
+    const { easter, easterMonday } = getEasterDate(year);
+    const easterStr = `${year}-${String(easter.getMonth() + 1).padStart(2, '0')}-${String(easter.getDate()).padStart(2, '0')}`;
+    const mondayStr = `${year}-${String(easterMonday.getMonth() + 1).padStart(2, '0')}-${String(easterMonday.getDate()).padStart(2, '0')}`;
+    
+    holidays[easterStr] = 'Pasqua';
+    holidays[mondayStr] = 'Lunedì dell\'Angelo';
+    
+    return holidays;
+}
+
+// Inizializza gestori eventi ferie
+function initLeaveManagement() {
+    const leaveCalendarBtn = document.getElementById('leaveCalendarBtn');
+    const requestLeaveBtn = document.getElementById('requestLeaveBtn');
+    const closeLeaveCalendarModal = document.getElementById('closeLeaveCalendarModal');
+    const closeRequestLeaveModal = document.getElementById('closeRequestLeaveModal');
+    const leaveCalendarYear = document.getElementById('leaveCalendarYear');
+    const requestTypeRadios = document.querySelectorAll('input[name="requestType"]');
+    
+    if (leaveCalendarBtn) {
+        leaveCalendarBtn.addEventListener('click', () => {
+            openLeaveCalendar();
+        });
+    }
+    
+    if (requestLeaveBtn) {
+        // Mostra il pulsante solo per i dipendenti (non admin visualizzando altri)
+        if (currentUser && (currentUser.role !== 'admin' || !selectedUser || selectedUser === currentUser.username)) {
+            requestLeaveBtn.style.display = 'inline-flex';
+        }
+        
+        requestLeaveBtn.addEventListener('click', () => {
+            openRequestLeaveModal();
+        });
+    }
+    
+    if (closeLeaveCalendarModal) {
+        closeLeaveCalendarModal.addEventListener('click', () => {
+            document.getElementById('leaveCalendarModal').style.display = 'none';
+        });
+    }
+    
+    if (closeRequestLeaveModal) {
+        closeRequestLeaveModal.addEventListener('click', () => {
+            document.getElementById('requestLeaveModal').style.display = 'none';
+        });
+    }
+    
+    if (leaveCalendarYear) {
+        leaveCalendarYear.addEventListener('change', () => {
+            renderLeaveCalendar();
+        });
+    }
+    
+    // Gestione tipo richiesta
+    requestTypeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const periodInputs = document.getElementById('periodInputs');
+            const singleDayInputs = document.getElementById('singleDayInputs');
+            
+            if (e.target.value === 'period') {
+                periodInputs.style.display = 'block';
+                singleDayInputs.style.display = 'none';
+            } else {
+                periodInputs.style.display = 'none';
+                singleDayInputs.style.display = 'block';
+                renderDatePicker();
+            }
+            updateLeaveRequestInfo();
+        });
+    });
+    
+    // Gestione form richiesta
+    const requestLeaveForm = document.getElementById('requestLeaveForm');
+    if (requestLeaveForm) {
+        requestLeaveForm.addEventListener('submit', handleLeaveRequest);
+    }
+    
+    // Aggiorna info quando cambiano le date
+    const leaveStartDate = document.getElementById('leaveStartDate');
+    const leaveEndDate = document.getElementById('leaveEndDate');
+    const leaveHoursPerDay = document.getElementById('leaveHoursPerDay');
+    
+    if (leaveStartDate) leaveStartDate.addEventListener('change', updateLeaveRequestInfo);
+    if (leaveEndDate) leaveEndDate.addEventListener('change', updateLeaveRequestInfo);
+    if (leaveHoursPerDay) leaveHoursPerDay.addEventListener('input', updateLeaveRequestInfo);
+    
+    // Annulla richiesta
+    const cancelRequestLeaveBtn = document.getElementById('cancelRequestLeaveBtn');
+    if (cancelRequestLeaveBtn) {
+        cancelRequestLeaveBtn.addEventListener('click', () => {
+            document.getElementById('requestLeaveModal').style.display = 'none';
+        });
+    }
+}
+
+// Apri calendario ferie
+function openLeaveCalendar() {
+    const modal = document.getElementById('leaveCalendarModal');
+    const yearSelect = document.getElementById('leaveCalendarYear');
+    
+    // Imposta anno corrente
+    yearSelect.value = new Date().getFullYear();
+    
+    modal.style.display = 'flex';
+    renderLeaveCalendar();
+    renderPendingRequests();
+}
+
+// Renderizza calendario annuale
+function renderLeaveCalendar() {
+    const year = parseInt(document.getElementById('leaveCalendarYear').value);
+    const container = document.getElementById('leaveCalendarGrid');
+    const holidays = getHolidaysForYear(year);
+    
+    // Crea legenda dipendenti
+    const legend = document.getElementById('leaveCalendarLegend');
+    const holidayLegend = legend.querySelector('div');
+    legend.innerHTML = '';
+    legend.appendChild(holidayLegend);
+    
+    Object.keys(DB.users).forEach(username => {
+        const user = DB.users[username];
+        const color = userColors[username] || '#999';
+        const legendItem = document.createElement('div');
+        legendItem.style.cssText = 'display: flex; align-items: center; gap: 5px;';
+        legendItem.innerHTML = `
+            <div style="width: 20px; height: 20px; background: ${color}; border-radius: 4px; opacity: 0.7;"></div>
+            <span style="font-size: 14px;">${user.name}</span>
+        `;
+        legend.appendChild(legendItem);
+    });
+    
+    // Crea tabella calendario
+    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+    html += '<thead><tr style="background: #f5f5f5;"><th style="padding: 8px; border: 1px solid #ddd;">Mese</th>';
+    
+    // Giorni del mese (1-31)
+    for (let day = 1; day <= 31; day++) {
+        html += `<th style="padding: 4px; border: 1px solid #ddd; min-width: 30px;">${day}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    
+    // Per ogni mese
+    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    
+    for (let month = 0; month < 12; month++) {
+        html += `<tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: 600; background: #fafafa;">${monthNames[month]}</td>`;
+        
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        for (let day = 1; day <= 31; day++) {
+            if (day > daysInMonth) {
+                html += '<td style="border: 1px solid #ddd; background: #f9f9f9;"></td>';
+            } else {
+                const date = new Date(year, month, day);
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayOfWeek = date.getDay();
+                
+                let cellStyle = 'padding: 4px; border: 1px solid #ddd; text-align: center; position: relative; min-height: 40px;';
+                let cellContent = '';
+                
+                // Weekend
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    cellStyle += ' background: #f5f5f5;';
+                }
+                
+                // Festività
+                if (holidays[dateStr]) {
+                    cellStyle += ' background: #f44336; color: white; font-weight: bold;';
+                    cellContent = `<div style="font-size: 10px;" title="${holidays[dateStr]}">🎉</div>`;
+                }
+                
+                // Richieste ferie
+                const requests = getLeaveRequestsForDate(dateStr);
+                if (requests.length > 0) {
+                    cellContent += '<div style="display: flex; flex-direction: column; gap: 2px;">';
+                    requests.forEach(req => {
+                        const user = DB.users[req.userId];
+                        const color = userColors[req.userId] || '#999';
+                        const opacity = req.status === 'approved' ? '0.8' : req.status === 'pending' ? '0.5' : '0.3';
+                        const icon = req.status === 'approved' ? '✓' : req.status === 'pending' ? '⏳' : '✗';
+                        
+                        cellContent += `
+                            <div style="background: ${color}; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; opacity: ${opacity};" 
+                                 title="${user.name} - ${req.status}">
+                                ${icon} ${user.name.split(' ')[0]}
+                            </div>
+                        `;
+                    });
+                    cellContent += '</div>';
+                }
+                
+                html += `<td style="${cellStyle}">${cellContent}</td>`;
+            }
+        }
+        
+        html += '</tr>';
+    }
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// Ottieni richieste ferie per una data specifica
+function getLeaveRequestsForDate(dateStr) {
+    if (!DB.leaveRequests) return [];
+    
+    const requests = [];
+    Object.keys(DB.leaveRequests).forEach(requestId => {
+        const request = DB.leaveRequests[requestId];
+        
+        if (request.type === 'period') {
+            const start = new Date(request.startDate);
+            const end = new Date(request.endDate);
+            const current = new Date(dateStr);
+            
+            if (current >= start && current <= end) {
+                requests.push(request);
+            }
+        } else if (request.type === 'single' && request.dates) {
+            if (request.dates.includes(dateStr)) {
+                requests.push(request);
+            }
+        }
+    });
+    
+    return requests;
+}
+
+// Renderizza richieste in attesa
+function renderPendingRequests() {
+    if (!currentUser || currentUser.role !== 'admin') {
+        document.getElementById('pendingRequestsSection').style.display = 'none';
+        return;
+    }
+    
+    if (!DB.leaveRequests) {
+        DB.leaveRequests = {};
+    }
+    
+    const pending = Object.keys(DB.leaveRequests)
+        .filter(id => DB.leaveRequests[id].status === 'pending')
+        .map(id => ({ id, ...DB.leaveRequests[id] }));
+    
+    if (pending.length === 0) {
+        document.getElementById('pendingRequestsSection').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('pendingRequestsSection').style.display = 'block';
+    const container = document.getElementById('pendingRequestsList');
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+    
+    pending.forEach(req => {
+        const user = DB.users[req.userId];
+        const color = userColors[req.userId] || '#999';
+        
+        let dateInfo = '';
+        if (req.type === 'period') {
+            dateInfo = `${formatDate(req.startDate)} - ${formatDate(req.endDate)}`;
+        } else {
+            dateInfo = `${req.dates.length} giorn${req.dates.length === 1 ? 'o' : 'i'} singol${req.dates.length === 1 ? 'o' : 'i'}`;
+        }
+        
+        const totalHours = req.type === 'period' 
+            ? calculateBusinessDays(req.startDate, req.endDate) * req.hoursPerDay
+            : req.dates.length * req.hoursPerDay;
+        
+        html += `
+            <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid ${color};">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">${user.name}</div>
+                        <div style="font-size: 13px; color: #666;">
+                            📅 ${dateInfo}<br>
+                            ⏱️ ${totalHours}h (${req.hoursPerDay}h/giorno)
+                        </div>
+                        ${req.notes ? `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">💬 ${req.notes}</div>` : ''}
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                            Richiesto il ${formatDate(req.requestDate)}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        ${req.type === 'period' ? `
+                            <button onclick="handleLeaveApproval('${req.id}', true)" class="btn btn-success" style="padding: 6px 12px; font-size: 13px;">
+                                ✓ Approva Tutto
+                            </button>
+                        ` : `
+                            <button onclick="showDayByDayApproval('${req.id}')" class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">
+                                📋 Approva Singolarmente
+                            </button>
+                        `}
+                        <button onclick="handleLeaveApproval('${req.id}', false)" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">
+                            ✗ Rifiuta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Gestione approvazione/rifiuto
+async function handleLeaveApproval(requestId, approved) {
+    if (!DB.leaveRequests || !DB.leaveRequests[requestId]) return;
+    
+    const request = DB.leaveRequests[requestId];
+    request.status = approved ? 'approved' : 'rejected';
+    request.approvedBy = currentUser.username;
+    request.approvedDate = new Date().toISOString();
+    
+    // Se approvato, detrai le ore dal saldo ferie
+    if (approved) {
+        const user = DB.users[request.userId];
+        let totalHours = 0;
+        
+        if (request.type === 'period') {
+            const businessDays = calculateBusinessDays(request.startDate, request.endDate);
+            totalHours = businessDays * request.hoursPerDay;
+        } else {
+            totalHours = request.dates.length * request.hoursPerDay;
+        }
+        
+        user.ferieResidue -= totalHours;
+        
+        // Salva su Firebase
+        if (typeof dbRef !== 'undefined') {
+            await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
+        }
+    }
+    
+    // Salva richiesta su Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.leaveRequests.child(requestId).set(request);
+    }
+    
+    // Invia notifica al dipendente
+    sendLeaveNotification(request.userId, approved ? 'approved' : 'rejected', request);
+    
+    // Aggiorna visualizzazione
+    renderLeaveCalendar();
+    renderPendingRequests();
+    
+    alert(`Richiesta ${approved ? 'approvata' : 'rifiutata'} con successo!`);
+}
+
+// Mostra approvazione giorno per giorno
+function showDayByDayApproval(requestId) {
+    const request = DB.leaveRequests[requestId];
+    if (!request || request.type !== 'single') return;
+    
+    const user = DB.users[request.userId];
+    let html = `
+        <div style="padding: 20px;">
+            <h4 style="margin-bottom: 15px;">Approva giorni singolarmente - ${user.name}</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+    `;
+    
+    request.dates.forEach(dateStr => {
+        const formatted = formatDate(dateStr);
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                <span style="font-weight: 500;">${formatted} (${request.hoursPerDay}h)</span>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="approveSingleDay('${requestId}', '${dateStr}')" class="btn btn-success" style="padding: 4px 10px; font-size: 12px;">✓</button>
+                    <button onclick="rejectSingleDay('${requestId}', '${dateStr}')" class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;">✗</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeModal()" class="btn btn-secondary">Chiudi</button>
+                <button onclick="approveAllDays('${requestId}')" class="btn btn-primary">Approva Tutti</button>
+            </div>
+        </div>
+    `;
+    
+    // Crea modale temporaneo
+    const tempModal = document.createElement('div');
+    tempModal.className = 'modal';
+    tempModal.style.display = 'flex';
+    tempModal.innerHTML = `<div class="modal-content" style="max-width: 600px;">${html}</div>`;
+    document.body.appendChild(tempModal);
+    
+    window.closeModal = () => {
+        tempModal.remove();
+        renderPendingRequests();
+    };
+}
+
+// Approva singolo giorno
+async function approveSingleDay(requestId, dateStr) {
+    const request = DB.leaveRequests[requestId];
+    if (!request.approvedDates) request.approvedDates = [];
+    if (!request.rejectedDates) request.rejectedDates = [];
+    
+    request.approvedDates.push(dateStr);
+    
+    // Detrai ore
+    const user = DB.users[request.userId];
+    user.ferieResidue -= request.hoursPerDay;
+    
+    // Se tutti i giorni sono stati processati, chiudi la richiesta
+    const processedDays = request.approvedDates.length + request.rejectedDates.length;
+    if (processedDays === request.dates.length) {
+        request.status = request.approvedDates.length > 0 ? 'approved' : 'rejected';
+    }
+    
+    // Salva
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.leaveRequests.child(requestId).set(request);
+        await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
+    }
+    
+    sendLeaveNotification(request.userId, 'approved', request, dateStr);
+    closeModal();
+}
+
+// Rifiuta singolo giorno
+async function rejectSingleDay(requestId, dateStr) {
+    const request = DB.leaveRequests[requestId];
+    if (!request.approvedDates) request.approvedDates = [];
+    if (!request.rejectedDates) request.rejectedDates = [];
+    
+    request.rejectedDates.push(dateStr);
+    
+    // Se tutti i giorni sono stati processati, chiudi la richiesta
+    const processedDays = request.approvedDates.length + request.rejectedDates.length;
+    if (processedDays === request.dates.length) {
+        request.status = request.approvedDates.length > 0 ? 'approved' : 'rejected';
+    }
+    
+    // Salva
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.leaveRequests.child(requestId).set(request);
+    }
+    
+    sendLeaveNotification(request.userId, 'rejected', request, dateStr);
+    closeModal();
+}
+
+// Approva tutti i giorni singoli
+async function approveAllDays(requestId) {
+    await handleLeaveApproval(requestId, true);
+    closeModal();
+}
+
+// Apri modale richiesta ferie
+function openRequestLeaveModal() {
+    const modal = document.getElementById('requestLeaveModal');
+    const form = document.getElementById('requestLeaveForm');
+    form.reset();
+    
+    // Imposta date minime (oggi)
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('leaveStartDate').min = today;
+    document.getElementById('leaveEndDate').min = today;
+    
+    // Reset visualizzazione
+    document.getElementById('periodInputs').style.display = 'block';
+    document.getElementById('singleDayInputs').style.display = 'none';
+    
+    modal.style.display = 'flex';
+    updateLeaveRequestInfo();
+}
+
+// Renderizza date picker per giorni singoli
+function renderDatePicker() {
+    const container = document.getElementById('datePickerContainer');
+    const today = new Date();
+    const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+    
+    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;">';
+    
+    for (let d = new Date(today); d <= nextYear; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const formatted = formatDate(dateStr);
+        const dayOfWeek = d.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        
+        html += `
+            <label style="display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; ${isWeekend ? 'background: #f5f5f5;' : ''}" 
+                   onmouseover="this.style.background='#e3f2fd'" 
+                   onmouseout="this.style.background='${isWeekend ? '#f5f5f5' : 'white'}'">
+                <input type="checkbox" name="selectedDates" value="${dateStr}" onchange="updateLeaveRequestInfo()" style="cursor: pointer;">
+                <span style="font-size: 13px;">${formatted}</span>
+            </label>
+        `;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Aggiorna info richiesta
+function updateLeaveRequestInfo() {
+    const requestType = document.querySelector('input[name="requestType"]:checked').value;
+    const hoursPerDay = parseFloat(document.getElementById('leaveHoursPerDay').value) || 8;
+    const infoBox = document.getElementById('leaveRequestInfo');
+    
+    let totalDays = 0;
+    let totalHours = 0;
+    
+    if (requestType === 'period') {
+        const startDate = document.getElementById('leaveStartDate').value;
+        const endDate = document.getElementById('leaveEndDate').value;
+        
+        if (startDate && endDate) {
+            totalDays = calculateBusinessDays(startDate, endDate);
+            totalHours = totalDays * hoursPerDay;
+        }
+    } else {
+        const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'));
+        totalDays = selectedDates.length;
+        totalHours = totalDays * hoursPerDay;
+    }
+    
+    if (totalDays > 0) {
+        const currentUserData = DB.users[currentUser.username];
+        const remaining = currentUserData.ferieResidue - totalHours;
+        
+        infoBox.innerHTML = `
+            <strong>📊 Riepilogo Richiesta:</strong><br>
+            • Giorni lavorativi: ${totalDays}<br>
+            • Ore totali: ${totalHours}h<br>
+            • Ferie residue attuali: ${currentUserData.ferieResidue.toFixed(2)}h<br>
+            • Ferie residue dopo approvazione: <strong style="color: ${remaining >= 0 ? '#4CAF50' : '#f44336'}">${remaining.toFixed(2)}h</strong>
+            ${remaining < 0 ? '<br><br>⚠️ <strong>Attenzione:</strong> Non hai abbastanza ferie disponibili!' : ''}
+        `;
+    } else {
+        infoBox.innerHTML = 'Seleziona le date per vedere il riepilogo';
+    }
+}
+
+// Calcola giorni lavorativi (esclude weekend)
+function calculateBusinessDays(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    let count = 0;
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Non domenica e non sabato
+            count++;
+        }
+    }
+    
+    return count;
+}
+
+// Gestione invio richiesta ferie
+async function handleLeaveRequest(e) {
+    e.preventDefault();
+    
+    const requestType = document.querySelector('input[name="requestType"]:checked').value;
+    const hoursPerDay = parseFloat(document.getElementById('leaveHoursPerDay').value);
+    const notes = document.getElementById('leaveNotes').value;
+    
+    let request = {
+        userId: currentUser.username,
+        type: requestType,
+        hoursPerDay,
+        notes,
+        status: 'pending',
+        requestDate: new Date().toISOString()
+    };
+    
+    if (requestType === 'period') {
+        const startDate = document.getElementById('leaveStartDate').value;
+        const endDate = document.getElementById('leaveEndDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('Seleziona le date di inizio e fine');
+            return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            alert('La data di inizio deve essere precedente alla data di fine');
+            return;
+        }
+        
+        request.startDate = startDate;
+        request.endDate = endDate;
+    } else {
+        const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'))
+            .map(cb => cb.value);
+        
+        if (selectedDates.length === 0) {
+            alert('Seleziona almeno una data');
+            return;
+        }
+        
+        request.dates = selectedDates;
+    }
+    
+    // Verifica saldo ferie
+    const totalHours = requestType === 'period'
+        ? calculateBusinessDays(request.startDate, request.endDate) * hoursPerDay
+        : request.dates.length * hoursPerDay;
+    
+    if (DB.users[currentUser.username].ferieResidue < totalHours) {
+        if (!confirm('Non hai abbastanza ferie disponibili. Vuoi procedere comunque con la richiesta?')) {
+            return;
+        }
+    }
+    
+    // Inizializza DB.leaveRequests se non esiste
+    if (!DB.leaveRequests) {
+        DB.leaveRequests = {};
+    }
+    
+    // Genera ID univoco
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    DB.leaveRequests[requestId] = request;
+    
+    // Salva su Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.leaveRequests.child(requestId).set(request);
+    }
+    
+    // Invia notifica agli admin
+    sendLeaveNotificationToAdmins(request);
+    
+    // Chiudi modale
+    document.getElementById('requestLeaveModal').style.display = 'none';
+    
+    alert('Richiesta inviata con successo! Riceverai una notifica quando verrà processata.');
+}
+
+// Invia notifica agli admin
+function sendLeaveNotificationToAdmins(request) {
+    const user = DB.users[request.userId];
+    
+    // Trova tutti gli admin
+    Object.keys(DB.users).forEach(username => {
+        if (DB.users[username].role === 'admin') {
+            // Invia notifica push se disponibile
+            if (Notification.permission === 'granted') {
+                showLocalNotification(
+                    '🏖️ Nuova Richiesta Ferie',
+                    `${user.name} ha richiesto ferie. Controlla il calendario per approvarle.`
+                );
+            }
+        }
+    });
+}
+
+// Invia notifica al dipendente
+function sendLeaveNotification(userId, status, request, specificDate = null) {
+    const user = DB.users[userId];
+    
+    let title = status === 'approved' ? '✅ Ferie Approvate' : '❌ Ferie Rifiutate';
+    let body = '';
+    
+    if (specificDate) {
+        body = `La tua richiesta per il ${formatDate(specificDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    } else if (request.type === 'period') {
+        body = `La tua richiesta dal ${formatDate(request.startDate)} al ${formatDate(request.endDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    } else {
+        body = `La tua richiesta per ${request.dates.length} giorn${request.dates.length === 1 ? 'o' : 'i'} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
+    }
+    
+    if (Notification.permission === 'granted') {
+        showLocalNotification(title, body);
+    }
+}
+
+// Controlla ferie in arrivo (7 giorni prima)
+function checkUpcomingLeave() {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    if (!DB.leaveRequests) return;
+    
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    Object.keys(DB.leaveRequests).forEach(requestId => {
+        const request = DB.leaveRequests[requestId];
+        
+        if (request.status !== 'approved') return;
+        
+        if (request.type === 'period') {
+            const startDate = new Date(request.startDate);
+            
+            if (startDate >= today && startDate <= nextWeek) {
+                const user = DB.users[request.userId];
+                showLocalNotification(
+                    '📅 Promemoria Ferie',
+                    `${user.name} inizia le ferie il ${formatDate(request.startDate)}`
+                );
+            }
+        }
+    });
+}
+
+// Controlla timbrature mancanti
+function checkMissingTimeEntries() {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Salta weekend
+    if (yesterday.getDay() === 0 || yesterday.getDay() === 6) return;
+    
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    
+    if (currentUser && DB.timeEntries[currentUser.username]) {
+        const entry = DB.timeEntries[currentUser.username][yesterdayStr];
+        
+        if (!entry) {
+            showLocalNotification(
+                '⚠️ Timbratura Mancante',
+                `Non hai inserito le ore per ${formatDate(yesterdayStr)}. Ricordati di aggiungerle!`
+            );
+        }
+    }
+}
+
+// Programma controlli automatici
+function scheduleLeaveChecks() {
+    // Controlla ferie in arrivo ogni giorno alle 9:00
+    setInterval(() => {
+        const now = new Date();
+        if (now.getHours() === 9 && now.getMinutes() === 0) {
+            checkUpcomingLeave();
+        }
+    }, 60000);
+    
+    // Controlla timbrature mancanti ogni giorno alle 20:00
+    setInterval(() => {
+        const now = new Date();
+        if (now.getHours() === 20 && now.getMinutes() === 0) {
+            checkMissingTimeEntries();
+        }
+    }, 60000);
+}
+
+// Formatta data per visualizzazione
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('it-IT', options);
 }

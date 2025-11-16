@@ -76,6 +76,17 @@
                             <path d="M15.695 13.7h.009M15.695 16.7h.009M11.995 13.7h.01M11.995 16.7h.01M8.294 13.7h.01M8.294 16.7h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
+                    <button id="leaveCalendarBtn" class="btn btn-icon" title="Calendario Ferie">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z" fill="currentColor"/>
+                            <path d="M7 12h5v5H7z" fill="#4CAF50"/>
+                        </svg>
+                    </button>
+                    <button id="requestLeaveBtn" class="btn btn-icon" title="Richiedi Ferie" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" fill="currentColor"/>
+                        </svg>
+                    </button>
                     <button id="usersManagementBtn" class="btn btn-icon" title="Gestione Utenti" style="display: none;">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -317,9 +328,9 @@
                 <div class="form-group">
                     <label for="userContractType">Tipo Contratto</label>
                     <select id="userContractType" name="userContractType" required>
-                        <option value="fulltime">Full Time (14,3h ferie/mese + 11,3h ROL/mese)</option>
-                        <option value="parttime">Part Time (10,75h ferie/mese + 6,5h ROL/mese)</option>
-                        <option value="none">Nessun accumulo automatico</option>
+                        <option value="fulltime">Full Time</option>
+                        <option value="parttime">Part Time</option>
+                        <option value="none">Nessuno</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -451,6 +462,113 @@
             <div id="holidaysList" style="max-height: 500px; overflow-y: auto;">
                 <!-- Lista festività generata dinamicamente -->
             </div>
+        </div>
+    </div>
+
+    <!-- Leave Calendar Modal -->
+    <div id="leaveCalendarModal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">📅 Calendario Ferie Annuale</h3>
+                <button id="closeLeaveCalendarModal" class="btn btn-secondary" style="display: flex; align-items: center; gap: 5px;">
+                    <span>&times;</span>
+                    <span>Chiudi</span>
+                </button>
+            </div>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
+                <div>
+                    <label for="leaveCalendarYear" style="margin-right: 10px; font-weight: 500;">Anno:</label>
+                    <select id="leaveCalendarYear" class="form-control" style="display: inline-block; width: auto; padding: 8px;">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div id="leaveCalendarLegend" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: #f44336; border-radius: 4px;"></div>
+                        <span style="font-size: 14px;">Festività</span>
+                    </div>
+                </div>
+            </div>
+            <div id="pendingRequestsSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Richieste in Attesa</h4>
+                <div id="pendingRequestsList"></div>
+            </div>
+            <div id="leaveCalendarGrid" style="overflow-x: auto;">
+                <!-- Calendario annuale generato dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Leave Modal -->
+    <div id="requestLeaveModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>🏖️ Richiedi Ferie</h3>
+                <button class="modal-close" id="closeRequestLeaveModal">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="requestLeaveForm" class="time-form">
+                <div class="form-group">
+                    <label>Tipo Richiesta</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="requestType" value="period" checked>
+                            <span>Periodo Continuo</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="requestType" value="single">
+                            <span>Giorni Singoli</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="periodInputs">
+                    <div class="form-group">
+                        <label for="leaveStartDate">Data Inizio</label>
+                        <input type="date" id="leaveStartDate" name="leaveStartDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="leaveEndDate">Data Fine</label>
+                        <input type="date" id="leaveEndDate" name="leaveEndDate" required>
+                    </div>
+                </div>
+
+                <div id="singleDayInputs" style="display: none;">
+                    <div class="form-group">
+                        <label for="leaveSingleDates">Seleziona Date (Ctrl/Cmd + Click per selezioni multiple)</label>
+                        <div id="datePickerContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px;">
+                            <!-- Date picker generato dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="leaveHoursPerDay">Ore per Giorno</label>
+                    <input type="number" id="leaveHoursPerDay" name="leaveHoursPerDay" value="8" min="0.5" max="8" step="0.5" required>
+                    <small style="color: #666;">Inserisci le ore di ferie per ogni giorno (es: 8 per giornata intera, 4 per mezza giornata)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="leaveNotes">Note (opzionale)</label>
+                    <textarea id="leaveNotes" name="leaveNotes" rows="3" placeholder="Aggiungi eventuali note alla richiesta..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;"></textarea>
+                </div>
+
+                <div class="info-box" style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #2196F3;">
+                    <p style="margin: 0; font-size: 13px; color: #1976D2;" id="leaveRequestInfo">
+                        Seleziona le date per vedere il riepilogo
+                    </p>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelRequestLeaveBtn">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Invia Richiesta</button>
+                </div>
+            </form>
         </div>
     </div>
 
