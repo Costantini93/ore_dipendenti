@@ -2219,13 +2219,21 @@ function initLeaveManagement() {
         radio.addEventListener('change', (e) => {
             const periodInputs = document.getElementById('periodInputs');
             const singleDayInputs = document.getElementById('singleDayInputs');
+            const startDateInput = document.getElementById('leaveStartDate');
+            const endDateInput = document.getElementById('leaveEndDate');
             
             if (e.target.value === 'period') {
                 periodInputs.style.display = 'block';
                 singleDayInputs.style.display = 'none';
+                // Aggiungi required per periodo
+                startDateInput.setAttribute('required', '');
+                endDateInput.setAttribute('required', '');
             } else {
                 periodInputs.style.display = 'none';
                 singleDayInputs.style.display = 'block';
+                // Rimuovi required per giorni singoli
+                startDateInput.removeAttribute('required');
+                endDateInput.removeAttribute('required');
                 renderDatePicker();
             }
             updateLeaveRequestInfo();
@@ -2623,12 +2631,22 @@ function openRequestLeaveModal() {
     
     // Imposta date minime (oggi)
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('leaveStartDate').min = today;
-    document.getElementById('leaveEndDate').min = today;
+    const startDateInput = document.getElementById('leaveStartDate');
+    const endDateInput = document.getElementById('leaveEndDate');
     
-    // Reset visualizzazione
+    startDateInput.min = today;
+    endDateInput.min = today;
+    
+    // Reset visualizzazione - default è periodo
     document.getElementById('periodInputs').style.display = 'block';
     document.getElementById('singleDayInputs').style.display = 'none';
+    
+    // Assicurati che required sia impostato per periodo (default)
+    startDateInput.setAttribute('required', '');
+    endDateInput.setAttribute('required', '');
+    
+    // Seleziona il radio "periodo" come default
+    document.querySelector('input[name="requestType"][value="period"]').checked = true;
     
     modal.style.display = 'flex';
     updateLeaveRequestInfo();
