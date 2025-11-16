@@ -2381,6 +2381,7 @@ function getLeaveRequestsForDate(dateStr) {
 }
 
 // Renderizza richieste in attesa
+// Renderizza richieste in attesa
 function renderPendingRequests() {
     if (!currentUser || currentUser.role !== 'admin') {
         document.getElementById('pendingRequestsSection').style.display = 'none';
@@ -2391,11 +2392,14 @@ function renderPendingRequests() {
         DB.leaveRequests = {};
     }
     
-    const pending = Object.keys(DB.leaveRequests)
-        .filter(id => DB.leaveRequests[id].status === 'pending')
-        .map(id => ({ id, ...DB.leaveRequests[id] }));
+    const allRequests = Object.keys(DB.leaveRequests)
+        .map(id => ({ id, ...DB.leaveRequests[id] }))
+        .sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
     
-    if (pending.length === 0) {
+    const pending = allRequests.filter(req => req.status === 'pending');
+    const processed = allRequests.filter(req => req.status !== 'pending');
+    
+    if (pending.length === 0 && processed.length === 0) {
         document.getElementById('pendingRequestsSection').style.display = 'none';
         return;
     }
@@ -2405,36 +2409,68 @@ function renderPendingRequests() {
     
     let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
     
-    pending.forEach(req => {
-        const user = DB.users[req.userId];
-        const color = userColors[req.userId] || '#999';
-        
-        let dateInfo = '';
-        if (req.type === 'period') {
-            dateInfo = `${formatDate(req.startDate)} - ${formatDate(req.endDate)}`;
-        } else {
-            dateInfo = `${req.dates.length} giorn${req.dates.length === 1 ? 'o' : 'i'} singol${req.dates.length === 1 ? 'o' : 'i'}`;
-        }
-        
-        const totalHours = req.type === 'period' 
-            ? calculateBusinessDays(req.startDate, req.endDate) * req.hoursPerDay
-            : req.dates.length * req.hoursPerDay;
-        
-        html += `
-            <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid ${color};">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 4px;">${user.name}</div>
-                        <div style="font-size: 13px; color: #666;">
-                            📅 ${dateInfo}<br>
-                            ⏱️ ${totalHours}h (${req.hoursPerDay}h/giorno)
-                        </div>
-                        ${req.notes ? `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">💬 ${req.notes}</div>` : ''}
-                        <div style="font-size: 11px; color: #999; margin-top: 4px;">
-                            Richiesto il ${formatDate(req.requestDate)}
-                        </div>
+    // Richieste in attesa
+    if (pending.length > 0) {
+        html += '<h5 style="margin: 0 0 10px 0; color: #856404;">⏳ In Attesa</h5>';
+        pending.forEach(req => {
+            html += renderRequestCard(req, true);
+        });
+    }
+    
+    // Richieste processate (ultime 5)
+    if (processed.length > 0) {
+        html += '<h5 style="margin: 15px 0 10px 0; color: #666;">📋 Recenti</h5>';
+        processed.slice(0, 5).forEach(req => {
+            html += renderRequestCard(req, false);
+        });
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Renderizza card singola richiesta
+function renderRequestCard(req, isPending) {
+    const user = DB.users[req.userId];
+    const color = userColors[req.userId] || '#999';
+    
+    let dateInfo = '';
+    if (req.type === 'period') {
+        dateInfo = `${formatDate(req.startDate)} - ${formatDate(req.endDate)}`;
+    } else {
+        dateInfo = `${req.dates.length} giorn${req.dates.length === 1 ? 'o' : 'i'} singol${req.dates.length === 1 ? 'o' : 'i'}`;
+    }
+    
+    const totalHours = req.type === 'period' 
+        ? calculateBusinessDays(req.startDate, req.endDate) * req.hoursPerDay
+        : req.dates.length * req.hoursPerDay;
+    
+    const statusBadge = req.status === 'approved' 
+        ? '<span style="background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">✓ Approvato</span>'
+        : req.status === 'rejected'
+        ? '<span style="background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">✗ Rifiutato</span>'
+        : '';
+    
+    return `
+        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid ${color};">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="font-weight: 600;">${user.name}</span>
+                        ${statusBadge}
                     </div>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="font-size: 13px; color: #666;">
+                        📅 ${dateInfo}<br>
+                        ⏱️ ${totalHours}h (${req.hoursPerDay}h/giorno)
+                    </div>
+                    ${req.notes ? `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">💬 ${req.notes}</div>` : ''}
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                        Richiesto il ${formatDate(req.requestDate)}
+                        ${req.approvedDate ? ` • Processato il ${formatDate(req.approvedDate)}` : ''}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    ${isPending ? `
                         ${req.type === 'period' ? `
                             <button onclick="handleLeaveApproval('${req.id}', true)" class="btn btn-success" style="padding: 6px 12px; font-size: 13px;">
                                 ✓ Approva Tutto
@@ -2447,14 +2483,15 @@ function renderPendingRequests() {
                         <button onclick="handleLeaveApproval('${req.id}', false)" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">
                             ✗ Rifiuta
                         </button>
-                    </div>
+                    ` : `
+                        <button onclick="deleteLeaveRequest('${req.id}')" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">
+                            🗑️ Cancella
+                        </button>
+                    `}
                 </div>
             </div>
-        `;
-    });
-    
-    html += '</div>';
-    container.innerHTML = html;
+        </div>
+    `;
 }
 
 // Gestione approvazione/rifiuto
@@ -2853,6 +2890,63 @@ function scheduleLeaveChecks() {
             checkMissingTimeEntries();
         }
     }, 60000);
+}
+
+// Cancella richiesta ferie e restituisci ore se era approvata
+async function deleteLeaveRequest(requestId) {
+    if (!DB.leaveRequests || !DB.leaveRequests[requestId]) return;
+    
+    const request = DB.leaveRequests[requestId];
+    
+    // Conferma cancellazione
+    const confirmMsg = request.status === 'approved' 
+        ? `Sei sicuro di voler cancellare questa richiesta approvata?\nLe ore verranno restituite al dipendente.`
+        : `Sei sicuro di voler cancellare questa richiesta?`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    // Se era approvata, restituisci le ore
+    if (request.status === 'approved') {
+        const user = DB.users[request.userId];
+        let totalHours = 0;
+        
+        if (request.type === 'period') {
+            const businessDays = calculateBusinessDays(request.startDate, request.endDate);
+            totalHours = businessDays * request.hoursPerDay;
+        } else {
+            // Conta solo i giorni effettivamente approvati
+            if (request.approvedDates && request.approvedDates.length > 0) {
+                totalHours = request.approvedDates.length * request.hoursPerDay;
+            } else {
+                totalHours = request.dates.length * request.hoursPerDay;
+            }
+        }
+        
+        // Restituisci le ore
+        user.ferieResidue += totalHours;
+        
+        // Salva su Firebase
+        if (typeof dbRef !== 'undefined') {
+            await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
+        }
+        
+        console.log(`✅ Restituite ${totalHours}h a ${user.name}`);
+    }
+    
+    // Cancella la richiesta
+    delete DB.leaveRequests[requestId];
+    
+    // Cancella da Firebase
+    if (typeof dbRef !== 'undefined') {
+        await dbRef.leaveRequests.child(requestId).remove();
+    }
+    
+    // Aggiorna visualizzazione
+    renderLeaveCalendar();
+    renderPendingRequests();
+    updateLeaveBalance();
+    
+    alert('Richiesta cancellata con successo' + (request.status === 'approved' ? ' e ore restituite!' : '!'));
 }
 
 // Formatta data per visualizzazione
