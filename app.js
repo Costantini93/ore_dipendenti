@@ -2158,11 +2158,18 @@ function getEasterDate(year) {
 // Ottieni tutte le festività per un anno
 function getHolidaysForYear(year) {
     const holidays = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     // Festività fisse
     Object.keys(italianHolidays).forEach(key => {
         const dateStr = `${year}-${key}`;
-        holidays[dateStr] = italianHolidays[key];
+        const holidayDate = new Date(dateStr);
+        
+        // Mostra solo festività future o di oggi
+        if (holidayDate >= today) {
+            holidays[dateStr] = italianHolidays[key];
+        }
     });
     
     // Pasqua e Lunedì dell'Angelo
@@ -2170,8 +2177,16 @@ function getHolidaysForYear(year) {
     const easterStr = `${year}-${String(easter.getMonth() + 1).padStart(2, '0')}-${String(easter.getDate()).padStart(2, '0')}`;
     const mondayStr = `${year}-${String(easterMonday.getMonth() + 1).padStart(2, '0')}-${String(easterMonday.getDate()).padStart(2, '0')}`;
     
-    holidays[easterStr] = 'Pasqua';
-    holidays[mondayStr] = 'Lunedì dell\'Angelo';
+    const easterDate = new Date(easterStr);
+    const mondayDate = new Date(mondayStr);
+    
+    // Mostra solo festività future o di oggi
+    if (easterDate >= today) {
+        holidays[easterStr] = 'Pasqua';
+    }
+    if (mondayDate >= today) {
+        holidays[mondayStr] = 'Lunedì dell\'Angelo';
+    }
     
     return holidays;
 }
