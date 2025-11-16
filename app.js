@@ -1932,11 +1932,14 @@ function calculateEaster(year) {
 }
 
 function getItalianHolidays(year) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const easter = calculateEaster(year);
     const easterMonday = new Date(easter);
     easterMonday.setDate(easter.getDate() + 1);
 
-    return [
+    const allHolidays = [
         { date: new Date(year, 0, 1), name: 'Capodanno', type: 'nazionale' },
         { date: new Date(year, 0, 6), name: 'Epifania', type: 'nazionale' },
         { date: easter, name: 'Pasqua', type: 'nazionale' },
@@ -1949,7 +1952,12 @@ function getItalianHolidays(year) {
         { date: new Date(year, 11, 8), name: 'Immacolata Concezione', type: 'nazionale' },
         { date: new Date(year, 11, 25), name: 'Natale', type: 'nazionale' },
         { date: new Date(year, 11, 26), name: 'Santo Stefano', type: 'nazionale' }
-    ].sort((a, b) => a.date - b.date);
+    ];
+    
+    // Filtra solo festività future o di oggi
+    return allHolidays
+        .filter(holiday => holiday.date >= today)
+        .sort((a, b) => a.date - b.date);
 }
 
 function renderHolidaysList(year) {
