@@ -6,6 +6,7 @@ const DB = {
             password: null, // null = primo accesso
             name: 'Alessandro Costantini',
             role: 'admin',
+            contractType: 'fulltime',
             ferieResidue: 0,   // Ore di ferie disponibili
             rolResidui: 0      // Ore di ROL disponibili (include ex festività)
         },
@@ -14,6 +15,7 @@ const DB = {
             password: null,
             name: 'Denise Raimondi',
             role: 'employee',
+            contractType: 'fulltime',
             ferieResidue: 0,
             rolResidui: 0
         },
@@ -22,6 +24,7 @@ const DB = {
             password: null,
             name: 'Sandy Oduro',
             role: 'employee',
+            contractType: 'parttime',
             ferieResidue: 0,
             rolResidui: 0
         },
@@ -30,6 +33,7 @@ const DB = {
             password: null,
             name: 'Luca Avesani',
             role: 'employee',
+            contractType: 'fulltime',
             ferieResidue: 0,
             rolResidui: 0
         },
@@ -38,6 +42,7 @@ const DB = {
             password: null,
             name: 'Sophie Rizzin',
             role: 'employee',
+            contractType: 'none',
             ferieResidue: 208,
             rolResidui: 120
         },
@@ -46,6 +51,7 @@ const DB = {
             password: null,
             name: 'Sofia Bilianska',
             role: 'employee',
+            contractType: 'none',
             ferieResidue: 208,
             rolResidui: 120
         }
@@ -160,12 +166,10 @@ function saveDataToStorage() {
 
 // Controllo e aggiunta ore mensili ferie
 async function checkAndAddMonthlyLeave() {
-    // Definisci gli utenti e le loro ore mensili
-    const usersMonthlyHours = {
-        'alessandrocostantini': { ferie: 14.3, rol: 11.3 },  // 172h/anno ferie, 136h/anno ROL
-        'lucaavesani': { ferie: 14.3, rol: 11.3 },
-        'deniseraimondi': { ferie: 14.3, rol: 11.3 },
-        'sandy_oduro': { ferie: 10.75, rol: 6.5 }  // 129h/anno ferie, 78h/anno ROL
+    // Definisci le ore mensili per tipo di contratto
+    const contractHours = {
+        'fulltime': { ferie: 14.3, rol: 11.3 },  // 172h/anno ferie, 136h/anno ROL
+        'parttime': { ferie: 10.75, rol: 6.5 }   // 129h/anno ferie, 78h/anno ROL
     };
     
     try {
@@ -180,29 +184,36 @@ async function checkAndAddMonthlyLeave() {
         if (lastProcessed !== currentMonthKey) {
             console.log('🔄 Aggiunta ore mensili ferie e ROL...');
             
-            for (const username in usersMonthlyHours) {
-                if (DB.users[username]) {
-                    const monthlyFerieHours = usersMonthlyHours[username].ferie;
-                    const monthlyRolHours = usersMonthlyHours[username].rol;
-                    
-                    const currentFerie = DB.users[username].ferieResidue || 0;
-                    const newFerie = currentFerie + monthlyFerieHours;
-                    
-                    const currentRol = DB.users[username].rolResidui || 0;
-                    const newRol = currentRol + monthlyRolHours;
-                    
-                    // Aggiorna Firebase
-                    await database.ref(`users/${username}`).update({
-                        ferieResidue: newFerie,
-                        rolResidui: newRol
-                    });
-                    
-                    // Aggiorna DB locale
-                    DB.users[username].ferieResidue = newFerie;
-                    DB.users[username].rolResidui = newRol;
-                    
-                    console.log(`✅ ${username}: Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(1)} → ${newRol.toFixed(1)})`);
+            // Scorri tutti gli utenti e aggiungi ore in base al loro contractType
+            for (const username in DB.users) {
+                const user = DB.users[username];
+                const contractType = user.contractType;
+                
+                // Salta utenti senza accumulo automatico
+                if (!contractType || contractType === 'none' || !contractHours[contractType]) {
+                    continue;
                 }
+                
+                const monthlyFerieHours = contractHours[contractType].ferie;
+                const monthlyRolHours = contractHours[contractType].rol;
+                
+                const currentFerie = user.ferieResidue || 0;
+                const newFerie = currentFerie + monthlyFerieHours;
+                
+                const currentRol = user.rolResidui || 0;
+                const newRol = currentRol + monthlyRolHours;
+                
+                // Aggiorna Firebase
+                await database.ref(`users/${username}`).update({
+                    ferieResidue: newFerie,
+                    rolResidui: newRol
+                });
+                
+                // Aggiorna DB locale
+                DB.users[username].ferieResidue = newFerie;
+                DB.users[username].rolResidui = newRol;
+                
+                console.log(`✅ ${username} (${contractType}): Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(1)} → ${newRol.toFixed(1)})`);
             }
             
             // Salva l'ultimo mese processato
@@ -472,6 +483,7 @@ function initApp() {
             document.getElementById('userUsername').value = '';
             document.getElementById('userPassword').value = '1234';
             document.getElementById('userRole').value = 'employee';
+            document.getElementById('userContractType').value = 'fulltime';
             document.getElementById('userFerie').value = '0';
             document.getElementById('userRol').value = '0';
             
@@ -529,6 +541,7 @@ function initApp() {
             const name = document.getElementById('userName').value.trim();
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
+            const contractType = document.getElementById('userContractType').value;
             const ferieResidue = parseFloat(document.getElementById('userFerie').value);
             const rolResidui = parseFloat(document.getElementById('userRol').value);
 
@@ -547,6 +560,7 @@ function initApp() {
             const userData = {
                 name,
                 role,
+                contractType,
                 ferieResidue,
                 rolResidui
             };
@@ -805,11 +819,12 @@ async function editUser(username) {
     document.getElementById('userPassword').required = false;
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
+    document.getElementById('userContractType').value = user.contractType || 'none';
     
     // Usa i valori esatti senza arrotondamenti
-    document.getElementById('userFerie').value = user.ferieResidue || 208;
+    document.getElementById('userFerie').value = user.ferieResidue || 0;
     document.getElementById('userFerie').disabled = false;
-    document.getElementById('userRol').value = user.rolResidui || 120;
+    document.getElementById('userRol').value = user.rolResidui || 0;
     document.getElementById('userRol').disabled = false;
     document.getElementById('userModal').style.display = 'flex';
 }
