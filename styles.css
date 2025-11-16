@@ -382,9 +382,10 @@ body {
 /* Calendar Header */
 .calendar-header {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
