@@ -1751,13 +1751,14 @@ footer strong {
 }
 
 .calendar-day {
-    min-height: 120px;
-    padding: 10px;
+    min-height: 130px;
+    padding: 12px;
     background: var(--card-bg);
     position: relative;
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
+    border: 1px solid var(--border-color);
 }
 
 .calendar-day.empty {
@@ -2246,4 +2247,42 @@ body.dark-mode .leave-status-badge.approved {
 body.dark-mode .leave-status-badge.rejected {
     background: #5a1a1a;
     color: #ff8a8a;
+}
+
+/* Dark mode - Legenda e sezioni calendario ferie */
+body.dark-mode #leaveCalendarLegend {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-primary);
+}
+
+body.dark-mode #leaveCalendarLegend span {
+    color: var(--text-primary);
+}
+
+body.dark-mode #pendingRequestsSection {
+    background: rgba(107, 84, 22, 0.3) !important;
+    border-left-color: #ffd93d !important;
+}
+
+body.dark-mode #pendingRequestsSection h4 {
+    color: #ffd93d !important;
+}
+
+/* Dark mode - Badge ferie su calendario */
+body.dark-mode .leave-badge {
+    color: white !important;
+}
+
+body.dark-mode .leave-user {
+    color: white !important;
+    font-weight: 700;
+}
+
+body.dark-mode .leave-icon {
+    color: white !important;
+}
+
+body.dark-mode .holiday-name {
+    color: #1a1a1a;
+    font-weight: 800;
 }
