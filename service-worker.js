@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v3';
+const CACHE_NAME = 'ore-dipendenti-v4';  // ← Incrementato per forzare aggiornamento
 const urlsToCache = [
   './',
   './index.html',
@@ -11,6 +11,9 @@ const urlsToCache = [
 
 // Installazione del Service Worker
 self.addEventListener('install', (event) => {
+  // Forza l'attivazione immediata
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -22,6 +25,7 @@ self.addEventListener('install', (event) => {
 
 // Attivazione del Service Worker
 self.addEventListener('activate', (event) => {
+  // Prendi controllo immediato di tutte le pagine
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -32,35 +36,57 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+      return self.clients.claim();
     })
   );
 });
 
 // Intercettazione delle richieste
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // SEMPRE dalla rete per Firebase e file JS/HTML (dati dinamici)
+  if (url.hostname.includes('firebase') || 
+      url.pathname.endsWith('.js') || 
+      url.pathname.endsWith('.html') ||
+      url.pathname === './' ||
+      url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Aggiorna la cache con la nuova versione
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Se offline, usa la cache come fallback
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+  
+  // Cache-first solo per CSS e immagini (risorse statiche)
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - ritorna la risposta dalla cache
         if (response) {
           return response;
         }
-        // Altrimenti fetch dalla rete
         return fetch(event.request).then(
           (response) => {
-            // Controlla se la risposta è valida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-
-            // Clona la risposta
             const responseToCache = response.clone();
-
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
               });
-
             return response;
           }
         );

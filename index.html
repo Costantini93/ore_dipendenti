@@ -230,6 +230,10 @@
                         <div class="summary-label">ROL</div>
                         <div class="summary-value" id="rolDays">0</div>
                     </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Malattia</div>
+                        <div class="summary-value" id="malattiaDays">0</div>
+                    </div>
                 </div>
 
                 <!-- Calendar Grid -->
@@ -417,6 +421,10 @@
                             <input type="radio" name="dayType" value="rol">
                             <span>ROL</span>
                         </label>
+                        <label class="radio-label">
+                            <input type="radio" name="dayType" value="malattia">
+                            <span>Malattia</span>
+                        </label>
                     </div>
                 </div>
 
@@ -436,6 +444,7 @@
                 </div>
 
                 <div class="modal-actions">
+                    <button type="button" class="btn btn-danger" id="deleteEntryBtn" style="display: none; margin-right: auto;">Elimina Giorno</button>
                     <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
                     <button type="submit" class="btn btn-primary">Salva</button>
                 </div>

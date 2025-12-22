@@ -1003,6 +1003,7 @@ function renderCalendar() {
             if (entry.type === 'off') cell.classList.add('has-off');
             if (entry.type === 'ferie') cell.classList.add('has-holiday');
             if (entry.type === 'rol') cell.classList.add('has-rol');
+            if (entry.type === 'malattia') cell.classList.add('has-malattia');
         }
 
         // Numero giorno
@@ -1083,9 +1084,14 @@ function openTimeModal(dateStr, existingEntry) {
             document.getElementById('endTime').value = existingEntry.endTime;
             updateCalculatedHours();
         }
+        // Mostra pulsante elimina solo per admin
+        if (currentUser.role === 'admin') {
+            document.getElementById('deleteEntryBtn').style.display = 'block';
+        }
     } else {
         form.reset();
         document.querySelector('input[name="dayType"][value="work"]').checked = true;
+        document.getElementById('deleteEntryBtn').style.display = 'none';
     }
 
     toggleTimeInputs();
@@ -1098,10 +1104,43 @@ function closeModal() {
     modal.classList.remove('show');
     modal.style.display = 'none';
     document.getElementById('timeForm').reset();
+    document.getElementById('deleteEntryBtn').style.display = 'none';
     
     // Ripristina il tipo default a "work"
     document.querySelector('input[name="dayType"][value="work"]').checked = true;
     toggleTimeInputs();
+}
+
+// Elimina entry (solo admin)
+function deleteTimeEntry() {
+    if (currentUser.role !== 'admin') {
+        alert('Solo l\'admin può eliminare i giorni.');
+        return;
+    }
+
+    const dateStr = document.getElementById('selectedDate').value;
+    const viewingUser = selectedUser;
+
+    if (!confirm(`Sei sicuro di voler eliminare completamente questo giorno?`)) {
+        return;
+    }
+
+    // Rimuovi da DB
+    if (DB.timeEntries[viewingUser] && DB.timeEntries[viewingUser][dateStr]) {
+        delete DB.timeEntries[viewingUser][dateStr];
+        saveToFirebase();
+    }
+
+    closeModal();
+    
+    // Aggiorna vista corrente
+    if (currentView === 'calendar') {
+        renderCalendar();
+    } else {
+        renderEmployeeTable();
+    }
+
+    alert('Giorno eliminato con successo');
 }
 
 // Gestione form inserimento ore
@@ -1110,6 +1149,7 @@ function initTimeForm() {
     const dayTypeRadios = document.querySelectorAll('input[name="dayType"]');
     const startTime = document.getElementById('startTime');
     const endTime = document.getElementById('endTime');
+    const deleteBtn = document.getElementById('deleteEntryBtn');
 
     dayTypeRadios.forEach(radio => {
         radio.addEventListener('change', toggleTimeInputs);
@@ -1122,6 +1162,8 @@ function initTimeForm() {
         e.preventDefault();
         saveTimeEntry();
     });
+
+    deleteBtn.addEventListener('click', deleteTimeEntry);
 }
 
 function toggleTimeInputs() {
@@ -1258,6 +1300,7 @@ function updateMonthlySummary() {
     let workDays = 0;
     let holidayDays = 0;
     let rolDays = 0;
+    let malattiaDays = 0;
 
     Object.keys(userEntries).forEach(dateStr => {
         const entryDate = new Date(dateStr + 'T12:00:00');
@@ -1271,6 +1314,8 @@ function updateMonthlySummary() {
                 holidayDays++;
             } else if (entry.type === 'rol') {
                 rolDays++;
+            } else if (entry.type === 'malattia') {
+                malattiaDays++;
             }
         }
     });
@@ -1279,6 +1324,7 @@ function updateMonthlySummary() {
     document.getElementById('workDays').textContent = workDays;
     document.getElementById('holidayDays').textContent = holidayDays;
     document.getElementById('rolDays').textContent = rolDays;
+    document.getElementById('malattiaDays').textContent = malattiaDays;
 }
 
 // Render tabella dipendenti (solo admin)
@@ -1366,6 +1412,9 @@ function renderEmployeeTable() {
                 } else if (entry.type === 'rol') {
                     cell.classList.add('rol-cell');
                     cell.innerHTML = '<div class="cell-content"><div class="cell-label">ROL</div></div>';
+                } else if (entry.type === 'malattia') {
+                    cell.classList.add('malattia-cell');
+                    cell.innerHTML = '<div class="cell-content"><div class="cell-label">MALATTIA</div></div>';
                 }
             } else {
                 cell.innerHTML = '<div class="cell-content"></div>';
@@ -1395,6 +1444,7 @@ function renderEmployeeTable() {
         let totalHours = 0;
         let ferieDays = 0;
         let rolDays = 0;
+        let malattiaDays = 0;
         
         Object.keys(userEntries).forEach(dateStr => {
             const entryDate = new Date(dateStr + 'T12:00:00');
@@ -1406,6 +1456,8 @@ function renderEmployeeTable() {
                     ferieDays++;
                 } else if (entry.type === 'rol') {
                     rolDays++;
+                } else if (entry.type === 'malattia') {
+                    malattiaDays++;
                 }
             }
         });
@@ -1415,7 +1467,7 @@ function renderEmployeeTable() {
         totalCell.innerHTML = `
             <div class="total-details">
                 <div class="total-hours"><strong>${totalHours.toFixed(1)}h</strong></div>
-                <div class="total-info">F: ${ferieDays} | R: ${rolDays}</div>
+                <div class="total-info">F: ${ferieDays} | R: ${rolDays} | M: ${malattiaDays}</div>
             </div>
         `;
         totalsRow.appendChild(totalCell);
@@ -1502,6 +1554,8 @@ async function exportTableViewToExcel(month) {
                     rowData.push('FERIE');
                 } else if (entry.type === 'rol') {
                     rowData.push('ROL');
+                } else if (entry.type === 'malattia') {
+                    rowData.push('MALATTIA');
                 } else if (entry.type === 'off') {
                     rowData.push('OFF');
                 }
@@ -1774,6 +1828,23 @@ async function exportCalendarToExcel(username, month) {
                     type: 'pattern',
                     pattern: 'solid',
                     fgColor: { argb: 'FF90EE90' }
+                };
+                row.getCell(2).font = { bold: true };
+                row.alignment = { horizontal: 'center', vertical: 'middle' };
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            } else if (entry.type === 'malattia') {
+                row = worksheet.addRow([dateFormatted, 'MALATTIA', '-', '-']);
+                row.getCell(2).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFB3BA' }
                 };
                 row.getCell(2).font = { bold: true };
                 row.alignment = { horizontal: 'center', vertical: 'middle' };

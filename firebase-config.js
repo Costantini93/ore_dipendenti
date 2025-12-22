@@ -18,8 +18,15 @@ const firebaseConfig = {
 };
 
 // Inizializza Firebase
-firebase.initializeApp(firebaseConfig);
+try {
+    firebase.initializeApp(firebaseConfig);
+    console.log('✅ Firebase inizializzato correttamente');
+} catch (error) {
+    console.error('❌ Errore inizializzazione Firebase:', error);
+}
+
 const database = firebase.database();
+console.log('✅ Database reference creato');
 
 // Riferimenti database
 const dbRef = {
@@ -28,3 +35,5 @@ const dbRef = {
     leaveRequests: database.ref('leaveRequests'),
     notifications: database.ref('notifications')
 };
+
+console.log('✅ dbRef creato:', dbRef);
