@@ -1128,19 +1128,28 @@ function deleteTimeEntry() {
     // Rimuovi da DB
     if (DB.timeEntries[viewingUser] && DB.timeEntries[viewingUser][dateStr]) {
         delete DB.timeEntries[viewingUser][dateStr];
-        saveToFirebase();
-    }
+        
+        // Salva su Firebase
+        saveDataToStorage().then(() => {
+            closeModal();
+            
+            // Aggiorna vista corrente
+            if (currentView === 'calendar') {
+                renderCalendar();
+                updateMonthlySummary();
+            } else {
+                renderEmployeeTable();
+            }
 
-    closeModal();
-    
-    // Aggiorna vista corrente
-    if (currentView === 'calendar') {
-        renderCalendar();
+            alert('Giorno eliminato con successo');
+        }).catch((error) => {
+            console.error('Errore eliminazione:', error);
+            alert('Errore durante l\'eliminazione. Riprova.');
+        });
     } else {
-        renderEmployeeTable();
+        closeModal();
+        alert('Nessun dato da eliminare');
     }
-
-    alert('Giorno eliminato con successo');
 }
 
 // Gestione form inserimento ore
