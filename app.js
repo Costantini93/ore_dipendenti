@@ -1627,6 +1627,14 @@ async function exportTableViewToExcel(month) {
                     fgColor: { argb: 'FFFF6B6B' }
                 };
                 cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            } else if (value === 'MALATTIA') {
+                // Rosa/Arancione chiaro
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFB3BA' }
+                };
+                cell.font = { bold: true };
             }
         }
     }
@@ -1705,6 +1713,34 @@ async function exportTableViewToExcel(month) {
     });
     const rolRow = worksheet.addRow(rolData);
     rolRow.eachCell((cell, colNum) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colNum === 1 ? 'FF808080' : 'FFD3D3D3' }
+        };
+        cell.font = { bold: true, color: { argb: colNum === 1 ? 'FFFFFFFF' : 'FF000000' } };
+        cell.alignment = { horizontal: 'center' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+    });
+    
+    // Riga MALATTIA
+    const malattiaData = ['MALATTIA'];
+    allUsers.forEach(username => {
+        let malattiaDays = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = DB.timeEntries[username]?.[dateStr];
+            if (entry && entry.type === 'malattia') malattiaDays++;
+        }
+        malattiaData.push(malattiaDays);
+    });
+    const malattiaRow = worksheet.addRow(malattiaData);
+    malattiaRow.eachCell((cell, colNum) => {
         cell.fill = {
             type: 'pattern',
             pattern: 'solid',
