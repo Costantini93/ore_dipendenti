@@ -71,7 +71,7 @@ Ogni dipendente ha un colore univoco:
 - Denise Raimondi: Rosa (#E91E63)
 - Sandy Oduro: Arancione (#FF9800)
 - Luca Avesani: Verde (#4CAF50)
-- Sophie Rizzin: Viola (#9C27B0)
+- Jonathan Gabrieli: Viola (#9C27B0)
 - Sofia Bilianska: Azzurro (#00BCD4)
 
 ### Approvare/Rifiutare Richieste

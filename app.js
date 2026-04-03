@@ -37,14 +37,14 @@ const DB = {
             ferieResidue: 0,
             rolResidui: 0
         },
-        'sophie_rizzin': {
-            username: 'sophie_rizzin',
+        'jonathan_gabrieli': {
+            username: 'jonathan_gabrieli',
             password: null,
-            name: 'Sophie Rizzin',
+            name: 'Jonathan Gabrieli',
             role: 'employee',
             contractType: 'none',
-            ferieResidue: 208,
-            rolResidui: 120
+            ferieResidue: 0,
+            rolResidui: 0
         },
         'sofia_bilianska': {
             username: 'sofia_bilianska',
@@ -2225,7 +2225,7 @@ const userColors = {
     'denise_raimondi': '#E91E63',
     'sandy_oduro': '#FF9800',
     'luca_avesani': '#4CAF50',
-    'sophie_rizzin': '#9C27B0',
+    'jonathan_gabrieli': '#9C27B0',
     'sofia_bilianska': '#00BCD4'
 };
 
