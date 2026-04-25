@@ -41,7 +41,7 @@ const DB = {
             username: 'jonathan_gabrieli',
             password: null,
             name: 'Jonathan Gabrieli',
-            role: 'employee',
+            role: 'admin',
             contractType: 'none',
             ferieResidue: 0,
             rolResidui: 0
