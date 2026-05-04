@@ -19,15 +19,6 @@ const DB = {
             ferieResidue: 0,
             rolResidui: 0
         },
-        'sandy_oduro': {
-            username: 'sandy_oduro',
-            password: null,
-            name: 'Sandy Oduro',
-            role: 'employee',
-            contractType: 'parttime',
-            ferieResidue: 0,
-            rolResidui: 0
-        },
         'luca_avesani': {
             username: 'luca_avesani',
             password: null,
@@ -91,8 +82,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     initApp();
 });
 
+// Cleanup one-shot: rimuove utenti eliminati da tutto il database Firebase
+async function cleanupRemovedUsers() {
+    const REMOVED_USERS = ['sandy_oduro'];
+    const FLAG_KEY = 'cleanup_removed_users_v1';
+    if (localStorage.getItem(FLAG_KEY) === 'done') return;
+    if (typeof firebase === 'undefined' || !dbRef) return;
+    try {
+        for (const u of REMOVED_USERS) {
+            // users
+            await dbRef.users.child(u).remove();
+            // timeEntries (chiavi = username)
+            await dbRef.timeEntries.child(u).remove();
+            // leaveRequests (oggetti con userId)
+            const lrSnap = await dbRef.leaveRequests.once('value');
+            const lr = lrSnap.val() || {};
+            for (const id of Object.keys(lr)) {
+                if (lr[id] && (lr[id].userId === u || lr[id].username === u)) {
+                    await dbRef.leaveRequests.child(id).remove();
+                }
+            }
+            // notifications (oggetti con userId)
+            const nSnap = await dbRef.notifications.once('value');
+            const ns = nSnap.val() || {};
+            for (const id of Object.keys(ns)) {
+                if (ns[id] && ns[id].userId === u) {
+                    await dbRef.notifications.child(id).remove();
+                }
+            }
+        }
+        localStorage.setItem(FLAG_KEY, 'done');
+        console.log('🧹 Cleanup utenti rimossi completato:', REMOVED_USERS);
+    } catch (err) {
+        console.error('❌ Errore cleanup utenti rimossi:', err);
+    }
+}
+
 // Carica dati da Firebase
 async function loadDataFromStorage() {
+    // Esegui cleanup utenti rimossi prima di caricare i dati
+    await cleanupRemovedUsers();
     // Carica password e contatori ferie/ROL da Firebase
     if (typeof firebase !== 'undefined') {
         try {
@@ -2223,7 +2252,6 @@ function initNotifications() {
 const userColors = {
     'alessandro_costantini': '#2196F3',
     'denise_raimondi': '#E91E63',
-    'sandy_oduro': '#FF9800',
     'luca_avesani': '#4CAF50',
     'jonathan_gabrieli': '#9C27B0',
     'sofia_bilianska': '#00BCD4'

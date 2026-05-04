@@ -69,7 +69,6 @@ Il sistema di gestione ferie include:
 Ogni dipendente ha un colore univoco:
 - Alessandro Costantini: Blu (#2196F3)
 - Denise Raimondi: Rosa (#E91E63)
-- Sandy Oduro: Arancione (#FF9800)
 - Luca Avesani: Verde (#4CAF50)
 - Jonathan Gabrieli: Viola (#9C27B0)
 - Sofia Bilianska: Azzurro (#00BCD4)

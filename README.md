@@ -34,7 +34,6 @@ Applicazione web moderna e intuitiva per la gestione delle ore lavorative dei di
 
    **Dipendenti:**
    - Username: `denise.raimondi`
-   - Username: `sandy.oduro`
    - Username: `luca.avesani`
    - Username: `jonathan.gabrieli`
    - Username: `sofia.bilianska`
