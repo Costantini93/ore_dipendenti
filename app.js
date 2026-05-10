@@ -10,10 +10,10 @@ const DB = {
             ferieResidue: 0,
             rolResidui: 0
         },
-        'maria': {
-            username: 'maria',
+        'maria_costandache': {
+            username: 'maria_costandache',
             password: null,
-            name: 'Maria',
+            name: 'Maria Costandache',
             role: 'employee',
             contractType: 'fulltime',
             ferieResidue: 0,
@@ -2246,7 +2246,7 @@ function initNotifications() {
 // Colori unici per ogni dipendente
 const userColors = {
     'denise_raimondi': '#E91E63',
-    'maria': '#4CAF50',
+    'maria_costandache': '#4CAF50',
     'jonathan_gabrieli': '#9C27B0',
     'sofia_bilianska': '#00BCD4'
 };
