@@ -739,7 +739,8 @@ function initializeApp() {
     }
 
     // Mostra balance ferie/ROL
-    document.getElementById('leaveBalance').style.display = 'flex';
+    const leaveBalanceEl = document.getElementById('leaveBalance');
+    if (leaveBalanceEl) leaveBalanceEl.style.display = 'flex';
     updateLeaveBalance();
 
     // Inizializza notifiche
@@ -760,10 +761,13 @@ function initializeApp() {
 // Aggiorna balance ferie/ROL
 function updateLeaveBalance() {
     const user = DB.users[selectedUser];
+    if (!user) return;
     const ferieOre = user.ferieResidue || 0;
     const ferieGiorni = (ferieOre / 8).toFixed(1); // Converti ore in giorni
-    document.getElementById('ferieResidue').textContent = `${ferieGiorni} gg`;
-    document.getElementById('rolResidui').textContent = `${(user.rolResidui || 0).toFixed(2)}h`;
+    const ferieEl = document.getElementById('ferieResidue');
+    if (ferieEl) ferieEl.textContent = `${ferieGiorni} gg`;
+    const rolEl = document.getElementById('rolResidui');
+    if (rolEl) rolEl.textContent = `${(user.rolResidui || 0).toFixed(2)}h`;
 }
 
 // Render users list for admin
@@ -1503,10 +1507,10 @@ function renderEmployeeTable() {
     });
 }
 
-// Registra Service Worker per PWA
+// Registra Service Worker per PWA (path relativo per supportare GitHub Pages project pages)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('service-worker.js')
             .then((registration) => {
                 console.log('✅ Service Worker registrato:', registration.scope);
             })
