@@ -1,15 +1,6 @@
 // Database simulato (in produzione usare un database reale)
 const DB = {
     users: {
-        'alessandro_costantini': {
-            username: 'alessandro_costantini',
-            password: null, // null = primo accesso
-            name: 'Alessandro Costantini',
-            role: 'admin',
-            contractType: 'fulltime',
-            ferieResidue: 0,   // Ore di ferie disponibili
-            rolResidui: 0      // Ore di ROL disponibili (include ex festività)
-        },
         'denise_raimondi': {
             username: 'denise_raimondi',
             password: null,
@@ -19,10 +10,10 @@ const DB = {
             ferieResidue: 0,
             rolResidui: 0
         },
-        'luca_avesani': {
-            username: 'luca_avesani',
+        'maria': {
+            username: 'maria',
             password: null,
-            name: 'Luca Avesani',
+            name: 'Maria',
             role: 'employee',
             contractType: 'fulltime',
             ferieResidue: 0,
@@ -2250,9 +2241,8 @@ function initNotifications() {
 
 // Colori unici per ogni dipendente
 const userColors = {
-    'alessandro_costantini': '#2196F3',
     'denise_raimondi': '#E91E63',
-    'luca_avesani': '#4CAF50',
+    'maria': '#4CAF50',
     'jonathan_gabrieli': '#9C27B0',
     'sofia_bilianska': '#00BCD4'
 };
