@@ -36,6 +36,15 @@ const DB = {
             contractType: 'none',
             ferieResidue: 208,
             rolResidui: 120
+        },
+        'gessica_basov': {
+            username: 'gessica_basov',
+            password: null,
+            name: 'Gessica Basov',
+            role: 'employee',
+            contractType: 'fulltime',
+            ferieResidue: 0,
+            rolResidui: 0
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -2248,7 +2257,8 @@ const userColors = {
     'denise_raimondi': '#E91E63',
     'maria_costandache': '#4CAF50',
     'jonathan_gabrieli': '#9C27B0',
-    'sofia_bilianska': '#00BCD4'
+    'sofia_bilianska': '#00BCD4',
+    'gessica_basov': '#FF9800'
 };
 
 // Festività italiane fisse
