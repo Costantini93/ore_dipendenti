@@ -45,6 +45,15 @@ const DB = {
             contractType: 'fulltime',
             ferieResidue: 0,
             rolResidui: 0
+        },
+        'silvia_pinali': {
+            username: 'silvia_pinali',
+            password: null,
+            name: 'Silvia Pinali',
+            role: 'employee',
+            contractType: 'fulltime',
+            ferieResidue: 0,
+            rolResidui: 0
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
