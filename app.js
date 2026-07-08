@@ -6,63 +6,49 @@ const DB = {
             password: null,
             name: 'Denise Raimondi',
             role: 'employee',
-            contractType: 'fulltime',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'fulltime'
         },
         'maria_costandache': {
             username: 'maria_costandache',
             password: null,
             name: 'Maria Costandache',
             role: 'employee',
-            contractType: 'fulltime',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'fulltime'
         },
         'jonathan_gabrieli': {
             username: 'jonathan_gabrieli',
             password: null,
             name: 'Jonathan Gabrieli',
             role: 'admin',
-            contractType: 'none',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'none'
         },
         'sofia_bilianska': {
             username: 'sofia_bilianska',
             password: null,
             name: 'Sofia Bilianska',
             role: 'employee',
-            contractType: 'none',
-            ferieResidue: 208,
-            rolResidui: 120
+            contractType: 'none'
         },
         'gessica_basov': {
             username: 'gessica_basov',
             password: null,
             name: 'Gessica Basov',
             role: 'employee',
-            contractType: 'fulltime',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'fulltime'
         },
         'silvia_pinali': {
             username: 'silvia_pinali',
             password: null,
             name: 'Silvia Pinali',
             role: 'employee',
-            contractType: 'fulltime',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'fulltime'
         },
         'andrea_atzeri': {
             username: 'andrea_atzeri',
             password: null,
             name: 'Andrea Atzeri',
             role: 'employee',
-            contractType: 'fulltime',
-            ferieResidue: 0,
-            rolResidui: 0
+            contractType: 'fulltime'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -78,8 +64,7 @@ let currentView = 'calendar'; // 'calendar' o 'table'
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', async () => {
     await loadDataFromStorage();
-    await checkAndAddMonthlyLeave();
-    
+
     // Carica preferenza dark mode
     const darkMode = localStorage.getItem('darkMode') === 'true';
     if (darkMode) {
@@ -112,14 +97,6 @@ async function cleanupRemovedUsers() {
             await dbRef.users.child(u).remove();
             // timeEntries (chiavi = username)
             await dbRef.timeEntries.child(u).remove();
-            // leaveRequests (oggetti con userId)
-            const lrSnap = await dbRef.leaveRequests.once('value');
-            const lr = lrSnap.val() || {};
-            for (const id of Object.keys(lr)) {
-                if (lr[id] && (lr[id].userId === u || lr[id].username === u)) {
-                    await dbRef.leaveRequests.child(id).remove();
-                }
-            }
             // notifications (oggetti con userId)
             const nSnap = await dbRef.notifications.once('value');
             const ns = nSnap.val() || {};
@@ -140,7 +117,7 @@ async function cleanupRemovedUsers() {
 async function loadDataFromStorage() {
     // Esegui cleanup utenti rimossi prima di caricare i dati
     await cleanupRemovedUsers();
-    // Carica password e contatori ferie/ROL da Firebase
+    // Carica password da Firebase
     if (typeof firebase !== 'undefined') {
         try {
             const snapshot = await dbRef.users.once('value');
@@ -151,12 +128,6 @@ async function loadDataFromStorage() {
                         if (data[username].password !== undefined) {
                             DB.users[username].password = data[username].password;
                         }
-                        if (data[username].ferieResidue !== undefined) {
-                            DB.users[username].ferieResidue = data[username].ferieResidue;
-                        }
-                        if (data[username].rolResidui !== undefined) {
-                            DB.users[username].rolResidui = data[username].rolResidui;
-                        }
                     }
                 });
             }
@@ -164,7 +135,7 @@ async function loadDataFromStorage() {
         } catch (error) {
             console.error('❌ Errore caricamento password:', error);
         }
-        
+
         // Carica timeEntries da Firebase con listener real-time
         dbRef.timeEntries.on('value', (snapshot) => {
             const data = snapshot.val();
@@ -179,34 +150,17 @@ async function loadDataFromStorage() {
                 }
             }
         });
-        
-        // Carica leaveRequests da Firebase con listener real-time
-        dbRef.leaveRequests.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                DB.leaveRequests = data;
-                // Aggiorna calendario ferie se aperto
-                if (document.getElementById('leaveCalendarModal').style.display === 'flex') {
-                    renderLeaveCalendar();
-                    renderPendingRequests();
-                }
-            } else {
-                DB.leaveRequests = {};
-            }
-        });
     }
 }
 
 // Salva dati in Firebase
 function saveDataToStorage() {
-    // Salva password e contatori ferie/ROL su Firebase
+    // Salva password su Firebase
     if (typeof firebase !== 'undefined' && dbRef) {
         const usersToSave = {};
         Object.keys(DB.users).forEach(username => {
             usersToSave[username] = {
-                password: DB.users[username].password,
-                ferieResidue: DB.users[username].ferieResidue || 208, // 26 giorni x 8 ore
-                rolResidui: DB.users[username].rolResidui || 120      // 15 giorni x 8 ore
+                password: DB.users[username].password
             };
         });
         
@@ -226,68 +180,6 @@ function saveDataToStorage() {
     
     return Promise.resolve();
 }
-
-// Controllo e aggiunta ore mensili ferie
-async function checkAndAddMonthlyLeave() {
-    // Definisci le ore mensili per tipo di contratto
-    const contractHours = {
-        'fulltime': { ferie: 14.3, rol: 11.3 },  // 172h/anno ferie, 136h/anno ROL
-        'parttime': { ferie: 10.75, rol: 6.5 }   // 129h/anno ferie, 78h/anno ROL
-    };
-    
-    try {
-        // Ottieni l'ultimo mese processato
-        const lastProcessedSnapshot = await database.ref('lastMonthlyLeaveUpdate').once('value');
-        const lastProcessed = lastProcessedSnapshot.val();
-        
-        const now = new Date();
-        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
-        // Se non è stato ancora processato questo mese
-        if (lastProcessed !== currentMonthKey) {
-            console.log('🔄 Aggiunta ore mensili ferie e ROL...');
-            
-            // Scorri tutti gli utenti e aggiungi ore in base al loro contractType
-            for (const username in DB.users) {
-                const user = DB.users[username];
-                const contractType = user.contractType;
-                
-                // Salta utenti senza accumulo automatico
-                if (!contractType || contractType === 'none' || !contractHours[contractType]) {
-                    continue;
-                }
-                
-                const monthlyFerieHours = contractHours[contractType].ferie;
-                const monthlyRolHours = contractHours[contractType].rol;
-                
-                const currentFerie = user.ferieResidue || 0;
-                const newFerie = currentFerie + monthlyFerieHours;
-                
-                const currentRol = user.rolResidui || 0;
-                const newRol = parseFloat((currentRol + monthlyRolHours).toFixed(2));
-                
-                // Aggiorna Firebase
-                await database.ref(`users/${username}`).update({
-                    ferieResidue: newFerie,
-                    rolResidui: newRol
-                });
-                
-                // Aggiorna DB locale
-                DB.users[username].ferieResidue = newFerie;
-                DB.users[username].rolResidui = newRol;
-                
-                console.log(`✅ ${username} (${contractType}): Ferie +${monthlyFerieHours}h (${currentFerie.toFixed(1)} → ${newFerie.toFixed(1)}), ROL +${monthlyRolHours}h (${currentRol.toFixed(2)} → ${newRol.toFixed(2)})`);
-            }
-            
-            // Salva l'ultimo mese processato
-            await database.ref('lastMonthlyLeaveUpdate').set(currentMonthKey);
-            console.log('✅ Ore mensili aggiunte con successo!');
-        }
-    } catch (error) {
-        console.error('❌ Errore aggiunta ore mensili:', error);
-    }
-}
-
 
 // Login Form
 function initLoginForm() {
@@ -547,9 +439,7 @@ function initApp() {
             document.getElementById('userPassword').value = '1234';
             document.getElementById('userRole').value = 'employee';
             document.getElementById('userContractType').value = 'fulltime';
-            document.getElementById('userFerie').value = '0';
-            document.getElementById('userRol').value = '0';
-            
+
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
@@ -605,8 +495,6 @@ function initApp() {
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
             const contractType = document.getElementById('userContractType').value;
-            const ferieResidue = parseFloat(document.getElementById('userFerie').value);
-            const rolResidui = parseFloat(parseFloat(document.getElementById('userRol').value).toFixed(2));
 
             // Validazione username non vuoto
             if (!username) {
@@ -623,9 +511,7 @@ function initApp() {
             const userData = {
                 name,
                 role,
-                contractType,
-                ferieResidue,
-                rolResidui
+                contractType
             };
 
             // Aggiungi password solo se è un nuovo utente o se è stata cambiata
@@ -713,7 +599,6 @@ function initApp() {
     // Selezione utente per admin
     document.getElementById('userSelect').addEventListener('change', (e) => {
         selectedUser = e.target.value;
-        updateLeaveBalance(); // Aggiorna contatori quando cambia utente
         renderCalendar();
         updateMonthlySummary();
     });
@@ -765,36 +650,16 @@ function initializeApp() {
         document.getElementById('usersManagementBtn').style.display = 'none';
     }
 
-    // Mostra balance ferie/ROL
-    const leaveBalanceEl = document.getElementById('leaveBalance');
-    if (leaveBalanceEl) leaveBalanceEl.style.display = 'flex';
-    updateLeaveBalance();
-
     // Inizializza notifiche
     initNotifications();
 
-    // Inizializza sistema gestione ferie
-    initLeaveManagement();
-    
     // Inizializza centro notifiche
     initNotificationCenter();
-    
-    // Programma controlli automatici ferie e timbrature
+
+    // Programma controlli automatici timbrature
     scheduleLeaveChecks();
 
     switchView('calendar');
-}
-
-// Aggiorna balance ferie/ROL
-function updateLeaveBalance() {
-    const user = DB.users[selectedUser];
-    if (!user) return;
-    const ferieOre = user.ferieResidue || 0;
-    const ferieGiorni = (ferieOre / 8).toFixed(1); // Converti ore in giorni
-    const ferieEl = document.getElementById('ferieResidue');
-    if (ferieEl) ferieEl.textContent = `${ferieGiorni} gg`;
-    const rolEl = document.getElementById('rolResidui');
-    if (rolEl) rolEl.textContent = `${(user.rolResidui || 0).toFixed(2)}h`;
 }
 
 // Render users list for admin
@@ -807,8 +672,7 @@ function renderUsersList() {
     Object.keys(DB.users).forEach(username => {
         const user = DB.users[username];
         const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-        const ferieGiorni = ((user.ferieResidue || 0) / 8).toFixed(1);
-        
+
         const userItem = document.createElement('div');
         userItem.className = 'user-item';
         userItem.innerHTML = `
@@ -820,7 +684,7 @@ function renderUsersList() {
                         <span class="user-badge badge-${user.role}">${user.role === 'admin' ? 'Admin' : 'Dipendente'}</span>
                     </div>
                     <div class="user-meta">
-                        @${username} • Ferie: ${ferieGiorni}gg • ROL: ${(user.rolResidui || 0).toFixed(2)}h
+                        @${username}
                     </div>
                 </div>
             </div>
@@ -889,12 +753,6 @@ async function editUser(username) {
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
     document.getElementById('userContractType').value = user.contractType || 'none';
-    
-    // Usa i valori esatti senza arrotondamenti
-    document.getElementById('userFerie').value = user.ferieResidue || 0;
-    document.getElementById('userFerie').disabled = false;
-    document.getElementById('userRol').value = user.rolResidui || 0;
-    document.getElementById('userRol').disabled = false;
     document.getElementById('userModal').style.display = 'flex';
 }
 
@@ -928,10 +786,9 @@ async function deleteUser(username) {
         
         populateUserSelect();
         renderUsersList();
-        updateLeaveBalance();
         renderCalendar();
         updateMonthlySummary();
-        
+
         alert('Utente eliminato con successo!');
     } catch (error) {
         console.error('Errore eliminazione utente:', error);
@@ -1275,9 +1132,6 @@ function saveTimeEntry() {
         DB.timeEntries[viewingUser] = {};
     }
 
-    // Controlla se c'era già un'entry (per gestire il cambio tipo)
-    const oldEntry = DB.timeEntries[viewingUser][dateStr];
-
     const entry = { type: dayType };
 
     if (dayType === 'work') {
@@ -1301,44 +1155,12 @@ function saveTimeEntry() {
         entry.hours = 0;
     }
 
-    // Gestione contatori ferie/ROL in ORE
-    const user = DB.users[viewingUser];
-    
-    // Ripristina ore se cambia da ferie/ROL a altro tipo
-    if (oldEntry) {
-        if (oldEntry.type === 'ferie' && dayType !== 'ferie') {
-            // Ripristina 8 ore (1 giorno)
-            user.ferieResidue = (user.ferieResidue || 0) + 8;
-        }
-        if (oldEntry.type === 'rol' && dayType !== 'rol') {
-            // Ripristina 8 ore (1 giorno)
-            user.rolResidui = parseFloat(((user.rolResidui || 0) + 8).toFixed(2));
-        }
-    }
-    
-    // Decrementa ore se è ferie/ROL (8 ore = 1 giorno)
-    if (dayType === 'ferie') {
-        if ((user.ferieResidue || 0) < 8) {
-            const giorniRimasti = ((user.ferieResidue || 0) / 8).toFixed(1);
-            alert(`⚠️ Attenzione: hai solo ${giorniRimasti} giorni di ferie disponibili!`);
-        }
-        user.ferieResidue = Math.max(0, (user.ferieResidue || 0) - 8);
-    }
-    
-    if (dayType === 'rol') {
-        if ((user.rolResidui || 0) < 8) {
-            alert(`⚠️ Attenzione: hai solo ${(user.rolResidui || 0).toFixed(2)} ore di ROL disponibili!`);
-        }
-        user.rolResidui = parseFloat(Math.max(0, (user.rolResidui || 0) - 8).toFixed(2));
-    }
-
     DB.timeEntries[viewingUser][dateStr] = entry;
-    
+
     // Salva e poi aggiorna l'interfaccia
     saveDataToStorage().then(() => {
         closeModal();
-        updateLeaveBalance(); // Aggiorna contatori
-        
+
         // Aggiorna vista in base alla modalità corrente
         if (currentView === 'calendar') {
             renderCalendar();
@@ -2268,807 +2090,6 @@ function initNotifications() {
     }
 }
 
-// ==================== SISTEMA GESTIONE FERIE ====================
-
-// Colori unici per ogni dipendente
-const userColors = {
-    'denise_raimondi': '#E91E63',
-    'maria_costandache': '#4CAF50',
-    'jonathan_gabrieli': '#9C27B0',
-    'sofia_bilianska': '#00BCD4',
-    'gessica_basov': '#FF9800'
-};
-
-// Festività italiane fisse
-const italianHolidays = {
-    '01-01': 'Capodanno',
-    '01-06': 'Epifania',
-    '04-25': 'Festa della Liberazione',
-    '05-01': 'Festa del Lavoro',
-    '06-02': 'Festa della Repubblica',
-    '08-15': 'Ferragosto',
-    '11-01': 'Tutti i Santi',
-    '12-08': 'Immacolata Concezione',
-    '12-25': 'Natale',
-    '12-26': 'Santo Stefano'
-};
-
-// Calcolo Pasqua e Lunedì dell'Angelo (algoritmo di Gauss)
-function getEasterDate(year) {
-    const a = year % 19;
-    const b = Math.floor(year / 100);
-    const c = year % 100;
-    const d = Math.floor(b / 4);
-    const e = b % 4;
-    const f = Math.floor((b + 8) / 25);
-    const g = Math.floor((b - f + 1) / 3);
-    const h = (19 * a + b - d - g + 15) % 30;
-    const i = Math.floor(c / 4);
-    const k = c % 4;
-    const l = (32 + 2 * e + 2 * i - h - k) % 7;
-    const m = Math.floor((a + 11 * h + 22 * l) / 451);
-    const month = Math.floor((h + l - 7 * m + 114) / 31);
-    const day = ((h + l - 7 * m + 114) % 31) + 1;
-    
-    const easter = new Date(year, month - 1, day);
-    const easterMonday = new Date(easter);
-    easterMonday.setDate(easterMonday.getDate() + 1);
-    
-    return { easter, easterMonday };
-}
-
-// Ottieni tutte le festività per un anno
-function getHolidaysForYear(year) {
-    const holidays = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Festività fisse
-    Object.keys(italianHolidays).forEach(key => {
-        const dateStr = `${year}-${key}`;
-        const holidayDate = new Date(dateStr);
-        
-        // Mostra solo festività future o di oggi
-        if (holidayDate >= today) {
-            holidays[dateStr] = italianHolidays[key];
-        }
-    });
-    
-    // Pasqua e Lunedì dell'Angelo
-    const { easter, easterMonday } = getEasterDate(year);
-    const easterStr = `${year}-${String(easter.getMonth() + 1).padStart(2, '0')}-${String(easter.getDate()).padStart(2, '0')}`;
-    const mondayStr = `${year}-${String(easterMonday.getMonth() + 1).padStart(2, '0')}-${String(easterMonday.getDate()).padStart(2, '0')}`;
-    
-    const easterDate = new Date(easterStr);
-    const mondayDate = new Date(mondayStr);
-    
-    // Mostra solo festività future o di oggi
-    if (easterDate >= today) {
-        holidays[easterStr] = 'Pasqua';
-    }
-    if (mondayDate >= today) {
-        holidays[mondayStr] = 'Lunedì dell\'Angelo';
-    }
-    
-    return holidays;
-}
-
-// Stato calendario ferie
-let currentLeaveDate = new Date();
-
-// Inizializza gestori eventi ferie
-function initLeaveManagement() {
-    const leaveCalendarBtn = document.getElementById('leaveCalendarBtn');
-    const requestLeaveBtn = document.getElementById('requestLeaveBtn');
-    const closeLeaveCalendarModal = document.getElementById('closeLeaveCalendarModal');
-    const closeRequestLeaveModal = document.getElementById('closeRequestLeaveModal');
-    const prevLeaveMonth = document.getElementById('prevLeaveMonth');
-    const nextLeaveMonth = document.getElementById('nextLeaveMonth');
-    
-    if (leaveCalendarBtn) {
-        leaveCalendarBtn.addEventListener('click', () => {
-            openLeaveCalendar();
-        });
-    }
-    
-    if (requestLeaveBtn) {
-        // Mostra il pulsante solo per i dipendenti (non admin visualizzando altri)
-        if (currentUser && (currentUser.role !== 'admin' || !selectedUser || selectedUser === currentUser.username)) {
-            requestLeaveBtn.style.display = 'inline-flex';
-        }
-        
-        requestLeaveBtn.addEventListener('click', () => {
-            openRequestLeaveModal();
-        });
-    }
-    
-    if (closeLeaveCalendarModal) {
-        closeLeaveCalendarModal.addEventListener('click', () => {
-            document.getElementById('leaveCalendarModal').style.display = 'none';
-        });
-    }
-    
-    if (closeRequestLeaveModal) {
-        closeRequestLeaveModal.addEventListener('click', () => {
-            document.getElementById('requestLeaveModal').style.display = 'none';
-        });
-    }
-    
-    if (prevLeaveMonth) {
-        prevLeaveMonth.addEventListener('click', () => {
-            currentLeaveDate.setMonth(currentLeaveDate.getMonth() - 1);
-            renderLeaveCalendar();
-        });
-    }
-    
-    if (nextLeaveMonth) {
-        nextLeaveMonth.addEventListener('click', () => {
-            currentLeaveDate.setMonth(currentLeaveDate.getMonth() + 1);
-            renderLeaveCalendar();
-        });
-    }
-    
-    // Gestione form richiesta
-    const requestLeaveForm = document.getElementById('requestLeaveForm');
-    if (requestLeaveForm) {
-        requestLeaveForm.addEventListener('submit', handleLeaveRequest);
-    }
-    
-    // Annulla richiesta
-    const cancelRequestLeaveBtn = document.getElementById('cancelRequestLeaveBtn');
-    if (cancelRequestLeaveBtn) {
-        cancelRequestLeaveBtn.addEventListener('click', () => {
-            document.getElementById('requestLeaveModal').style.display = 'none';
-        });
-    }
-}
-
-// Apri calendario ferie
-function openLeaveCalendar() {
-    const modal = document.getElementById('leaveCalendarModal');
-    
-    // Reset a mese corrente
-    currentLeaveDate = new Date();
-    
-    modal.style.display = 'flex';
-    renderLeaveCalendar();
-    renderPendingRequests();
-}
-
-// Renderizza calendario mensile ferie
-function renderLeaveCalendar() {
-    const year = currentLeaveDate.getFullYear();
-    const month = currentLeaveDate.getMonth();
-    const container = document.getElementById('leaveCalendarGrid');
-    const holidays = getHolidaysForYear(year);
-    
-    // Aggiorna titolo mese
-    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
-                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-    document.getElementById('currentLeaveMonth').textContent = `${monthNames[month]} ${year}`;
-    
-    // Crea legenda dipendenti
-    const legend = document.getElementById('leaveCalendarLegend');
-    const holidayLegend = legend.querySelector('div');
-    legend.innerHTML = '';
-    legend.appendChild(holidayLegend);
-    
-    Object.keys(DB.users).forEach(username => {
-        const user = DB.users[username];
-        const color = userColors[username] || '#999';
-        const legendItem = document.createElement('div');
-        legendItem.style.cssText = 'display: flex; align-items: center; gap: 5px;';
-        legendItem.innerHTML = `
-            <div style="width: 20px; height: 20px; background: ${color}; border-radius: 4px; opacity: 0.7;"></div>
-            <span style="font-size: 14px;">${user.name}</span>
-        `;
-        legend.appendChild(legendItem);
-    });
-    
-    // Giorni della settimana
-    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    
-    // Primo giorno del mese e numero giorni
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-    
-    // Costruisci griglia calendario
-    let html = '<div class="calendar-days-header">';
-    daysOfWeek.forEach(day => {
-        html += `<div class="day-header">${day}</div>`;
-    });
-    html += '</div><div class="calendar-days">';
-    
-    // Celle vuote per allineamento
-    for (let i = 0; i < startingDayOfWeek; i++) {
-        html += '<div class="calendar-day empty"></div>';
-    }
-    
-    // Giorni del mese
-    for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayOfWeek = date.getDay();
-        const isToday = dateStr === new Date().toISOString().split('T')[0];
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isHoliday = holidays[dateStr];
-        
-        let dayClasses = 'calendar-day';
-        if (isToday) dayClasses += ' today';
-        if (isWeekend) dayClasses += ' weekend';
-        if (isHoliday) dayClasses += ' holiday';
-        
-        html += `<div class="${dayClasses}">`;
-        html += `<div class="day-number">${day}</div>`;
-        
-        // Festività
-        if (isHoliday) {
-            html += `<div class="holiday-name">${holidays[dateStr]}</div>`;
-        }
-        
-        // Richieste ferie
-        const requests = getLeaveRequestsForDate(dateStr);
-        if (requests.length > 0) {
-            html += '<div class="leave-requests">';
-            requests.forEach(req => {
-                const user = DB.users[req.userId];
-                const color = userColors[req.userId] || '#999';
-                const opacity = req.status === 'approved' ? '0.9' : req.status === 'pending' ? '0.6' : '0.4';
-                const icon = req.status === 'approved' ? '✓' : req.status === 'pending' ? '⏳' : '✗';
-                const statusClass = req.status === 'approved' ? 'approved' : req.status === 'pending' ? 'pending' : 'rejected';
-                
-                html += `
-                    <div class="leave-badge ${statusClass}" style="background: ${color}; opacity: ${opacity};" 
-                         title="${user.name} - ${req.status === 'approved' ? 'Approvato' : req.status === 'pending' ? 'In attesa' : 'Rifiutato'}">
-                        <span class="leave-icon">${icon}</span>
-                        <span class="leave-user">${user.name.split(' ')[0]}</span>
-                    </div>
-                `;
-            });
-            html += '</div>';
-        }
-        
-        html += '</div>';
-    }
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Ottieni richieste ferie per una data specifica
-function getLeaveRequestsForDate(dateStr) {
-    if (!DB.leaveRequests) return [];
-    
-    const requests = [];
-    Object.keys(DB.leaveRequests).forEach(requestId => {
-        const request = DB.leaveRequests[requestId];
-        
-        if (request.type === 'period') {
-            const start = new Date(request.startDate);
-            const end = new Date(request.endDate);
-            const current = new Date(dateStr);
-            
-            if (current >= start && current <= end) {
-                requests.push(request);
-            }
-        } else if (request.type === 'single' && request.dates) {
-            if (request.dates.includes(dateStr)) {
-                requests.push(request);
-            }
-        }
-    });
-    
-    return requests;
-}
-
-// Renderizza richieste in attesa
-// Renderizza richieste in attesa
-function renderPendingRequests() {
-    if (!currentUser || currentUser.role !== 'admin') {
-        document.getElementById('pendingRequestsSection').style.display = 'none';
-        return;
-    }
-    
-    if (!DB.leaveRequests) {
-        DB.leaveRequests = {};
-    }
-    
-    const allRequests = Object.keys(DB.leaveRequests)
-        .map(id => ({ id, ...DB.leaveRequests[id] }))
-        .sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
-    
-    const pending = allRequests.filter(req => req.status === 'pending');
-    const processed = allRequests.filter(req => req.status !== 'pending');
-    
-    if (pending.length === 0 && processed.length === 0) {
-        document.getElementById('pendingRequestsSection').style.display = 'none';
-        return;
-    }
-    
-    document.getElementById('pendingRequestsSection').style.display = 'block';
-    const container = document.getElementById('pendingRequestsList');
-    
-    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
-    
-    // Richieste in attesa
-    if (pending.length > 0) {
-        html += '<h5 style="margin: 0 0 10px 0; color: #856404;">⏳ In Attesa</h5>';
-        pending.forEach(req => {
-            html += renderRequestCard(req, true);
-        });
-    }
-    
-    // Richieste processate (ultime 5)
-    if (processed.length > 0) {
-        html += '<h5 style="margin: 15px 0 10px 0; color: #666;">📋 Recenti</h5>';
-        processed.slice(0, 5).forEach(req => {
-            html += renderRequestCard(req, false);
-        });
-    }
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Renderizza card singola richiesta
-function renderRequestCard(req, isPending) {
-    const user = DB.users[req.userId];
-    const color = userColors[req.userId] || '#999';
-    
-    let dateInfo = '';
-    if (req.type === 'period') {
-        dateInfo = `${formatDate(req.startDate)} - ${formatDate(req.endDate)}`;
-    } else {
-        dateInfo = `${req.dates.length} giorn${req.dates.length === 1 ? 'o' : 'i'} singol${req.dates.length === 1 ? 'o' : 'i'}`;
-    }
-    
-    const totalHours = req.type === 'period' 
-        ? calculateBusinessDays(req.startDate, req.endDate) * req.hoursPerDay
-        : req.dates.length * req.hoursPerDay;
-    
-    const statusBadge = req.status === 'approved' 
-        ? '<span style="background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">✓ Approvato</span>'
-        : req.status === 'rejected'
-        ? '<span style="background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">✗ Rifiutato</span>'
-        : '';
-    
-    return `
-        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid ${color};">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-weight: 600;">${user.name}</span>
-                        ${statusBadge}
-                    </div>
-                    <div style="font-size: 13px; color: #666;">
-                        📅 ${dateInfo}<br>
-                        ⏱️ ${totalHours}h (${req.hoursPerDay}h/giorno)
-                    </div>
-                    ${req.notes ? `<div style="font-size: 12px; color: #888; margin-top: 4px; font-style: italic;">💬 ${req.notes}</div>` : ''}
-                    <div style="font-size: 11px; color: #999; margin-top: 4px;">
-                        Richiesto il ${formatDate(req.requestDate)}
-                        ${req.approvedDate ? ` • Processato il ${formatDate(req.approvedDate)}` : ''}
-                    </div>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    ${isPending ? `
-                        ${req.type === 'period' ? `
-                            <button onclick="handleLeaveApproval('${req.id}', true)" class="btn btn-success" style="padding: 6px 12px; font-size: 13px;">
-                                ✓ Approva Tutto
-                            </button>
-                        ` : `
-                            <button onclick="showDayByDayApproval('${req.id}')" class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">
-                                📋 Approva Singolarmente
-                            </button>
-                        `}
-                        <button onclick="handleLeaveApproval('${req.id}', false)" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">
-                            ✗ Rifiuta
-                        </button>
-                    ` : `
-                        <button onclick="deleteLeaveRequest('${req.id}')" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">
-                            🗑️ Cancella
-                        </button>
-                    `}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Gestione approvazione/rifiuto
-async function handleLeaveApproval(requestId, approved) {
-    if (!DB.leaveRequests || !DB.leaveRequests[requestId]) return;
-    
-    const request = DB.leaveRequests[requestId];
-    
-    // Se approvato, controlla duplicati
-    if (approved && request.type === 'single') {
-        // Controlla se qualche giorno è già approvato
-        const duplicates = [];
-        for (const dateStr of request.dates) {
-            const existingApproved = Object.values(DB.leaveRequests).some(req => 
-                req.userId === request.userId && 
-                req.status === 'approved' && 
-                req.id !== requestId && 
-                (req.approvedDates?.includes(dateStr) || (req.type === 'period' && isDateInRange(dateStr, req.startDate, req.endDate)))
-            );
-            if (existingApproved) {
-                duplicates.push(formatDate(dateStr));
-            }
-        }
-        
-        if (duplicates.length > 0) {
-            alert(`I seguenti giorni sono già approvati per questo dipendente:\n${duplicates.join('\n')}\n\nApprova i giorni singolarmente per evitare duplicati.`);
-            return;
-        }
-    }
-    
-    request.status = approved ? 'approved' : 'rejected';
-    request.approvedBy = currentUser.username;
-    request.approvedDate = new Date().toISOString();
-    
-    // Se approvato, detrai le ore dal saldo ferie
-    if (approved) {
-        const user = DB.users[request.userId];
-        let totalHours = 0;
-        
-        if (request.type === 'period') {
-            const businessDays = calculateBusinessDays(request.startDate, request.endDate);
-            totalHours = businessDays * request.hoursPerDay;
-        } else {
-            totalHours = request.dates.length * request.hoursPerDay;
-        }
-        
-        user.ferieResidue -= totalHours;
-        
-        // Salva su Firebase
-        if (typeof dbRef !== 'undefined') {
-            await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
-        }
-    }
-    
-    // Salva richiesta su Firebase
-    if (typeof dbRef !== 'undefined') {
-        await dbRef.leaveRequests.child(requestId).set(request);
-    }
-    
-    // Invia notifica al dipendente
-    sendLeaveNotification(request.userId, approved ? 'approved' : 'rejected', request);
-    
-    // Aggiorna visualizzazione
-    renderLeaveCalendar();
-    renderPendingRequests();
-    
-    alert(`Richiesta ${approved ? 'approvata' : 'rifiutata'} con successo!`);
-}
-
-// Mostra approvazione giorno per giorno
-function showDayByDayApproval(requestId) {
-    const request = DB.leaveRequests[requestId];
-    if (!request || request.type !== 'single') return;
-    
-    const user = DB.users[request.userId];
-    let html = `
-        <div style="padding: 20px;">
-            <h4 style="margin-bottom: 15px;">Approva giorni singolarmente - ${user.name}</h4>
-            <div style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
-    `;
-    
-    request.dates.forEach(dateStr => {
-        const formatted = formatDate(dateStr);
-        html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-                <span style="font-weight: 500;">${formatted} (${request.hoursPerDay}h)</span>
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="approveSingleDay('${requestId}', '${dateStr}')" class="btn btn-success" style="padding: 4px 10px; font-size: 12px;">✓</button>
-                    <button onclick="rejectSingleDay('${requestId}', '${dateStr}')" class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;">✗</button>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `
-            </div>
-            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="closeModal()" class="btn btn-secondary">Chiudi</button>
-                <button onclick="approveAllDays('${requestId}')" class="btn btn-primary">Approva Tutti</button>
-            </div>
-        </div>
-    `;
-    
-    // Crea modale temporaneo
-    const tempModal = document.createElement('div');
-    tempModal.className = 'modal';
-    tempModal.style.display = 'flex';
-    tempModal.innerHTML = `<div class="modal-content" style="max-width: 600px;">${html}</div>`;
-    document.body.appendChild(tempModal);
-    
-    window.closeModal = () => {
-        tempModal.remove();
-        renderPendingRequests();
-    };
-}
-
-// Approva singolo giorno
-async function approveSingleDay(requestId, dateStr) {
-    const request = DB.leaveRequests[requestId];
-    if (!request.approvedDates) request.approvedDates = [];
-    if (!request.rejectedDates) request.rejectedDates = [];
-    
-    // Controlla se il giorno è già stato approvato per questo utente
-    const existingApproved = Object.values(DB.leaveRequests).some(req => 
-        req.userId === request.userId && 
-        req.status === 'approved' && 
-        req.id !== requestId && 
-        (req.approvedDates?.includes(dateStr) || (req.type === 'period' && isDateInRange(dateStr, req.startDate, req.endDate)))
-    );
-    
-    if (existingApproved) {
-        alert(`Il giorno ${formatDate(dateStr)} è già stato approvato per questo dipendente in un'altra richiesta!`);
-        return;
-    }
-    
-    request.approvedDates.push(dateStr);
-    
-    // Detrai ore
-    const user = DB.users[request.userId];
-    user.ferieResidue -= request.hoursPerDay;
-    
-    // Se tutti i giorni sono stati processati, chiudi la richiesta
-    const processedDays = request.approvedDates.length + request.rejectedDates.length;
-    if (processedDays === request.dates.length) {
-        request.status = request.approvedDates.length > 0 ? 'approved' : 'rejected';
-    }
-    
-    // Salva
-    if (typeof dbRef !== 'undefined') {
-        await dbRef.leaveRequests.child(requestId).set(request);
-        await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
-    }
-    
-    sendLeaveNotification(request.userId, 'approved', request, dateStr);
-    closeModal();
-}
-
-// Rifiuta singolo giorno
-async function rejectSingleDay(requestId, dateStr) {
-    const request = DB.leaveRequests[requestId];
-    if (!request.approvedDates) request.approvedDates = [];
-    if (!request.rejectedDates) request.rejectedDates = [];
-    
-    request.rejectedDates.push(dateStr);
-    
-    // Se tutti i giorni sono stati processati, chiudi la richiesta
-    const processedDays = request.approvedDates.length + request.rejectedDates.length;
-    if (processedDays === request.dates.length) {
-        request.status = request.approvedDates.length > 0 ? 'approved' : 'rejected';
-    }
-    
-    // Salva
-    if (typeof dbRef !== 'undefined') {
-        await dbRef.leaveRequests.child(requestId).set(request);
-    }
-    
-    sendLeaveNotification(request.userId, 'rejected', request, dateStr);
-    closeModal();
-}
-
-// Approva tutti i giorni singoli
-async function approveAllDays(requestId) {
-    await handleLeaveApproval(requestId, true);
-    closeModal();
-}
-
-// Apri modale richiesta ferie
-function openRequestLeaveModal() {
-    const modal = document.getElementById('requestLeaveModal');
-    const form = document.getElementById('requestLeaveForm');
-    form.reset();
-    
-    // Renderizza date picker
-    renderDatePicker();
-    
-    modal.style.display = 'flex';
-    updateLeaveRequestInfo();
-}
-
-// Renderizza date picker per giorni singoli
-function renderDatePicker() {
-    const container = document.getElementById('datePickerContainer');
-    const today = new Date();
-    const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-    
-    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;">';
-    
-    for (let d = new Date(today); d <= nextYear; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
-        const formatted = formatDate(dateStr);
-        const dayOfWeek = d.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
-        html += `
-            <label style="display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; ${isWeekend ? 'background: #f5f5f5;' : ''}" 
-                   onmouseover="this.style.background='#e3f2fd'" 
-                   onmouseout="this.style.background='${isWeekend ? '#f5f5f5' : 'white'}'">
-                <input type="checkbox" name="selectedDates" value="${dateStr}" onchange="updateLeaveRequestInfo()" style="cursor: pointer;">
-                <span style="font-size: 13px;">${formatted}</span>
-            </label>
-        `;
-    }
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Aggiorna info richiesta
-// Aggiorna info richiesta
-function updateLeaveRequestInfo() {
-    const hoursPerDay = 8; // Sempre giornata intera
-    const infoBox = document.getElementById('leaveRequestInfo');
-    
-    const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'));
-    const totalDays = selectedDates.length;
-    const totalHours = totalDays * hoursPerDay;
-    
-    if (totalDays > 0) {
-        const currentUserData = DB.users[currentUser.username];
-        const remaining = currentUserData.ferieResidue - totalHours;
-        
-        infoBox.innerHTML = `
-            <strong>📊 Riepilogo Richiesta:</strong><br>
-            • Giorni selezionati: ${totalDays}<br>
-            • Ore totali: ${totalHours}h (${totalDays} ${totalDays === 1 ? 'giornata intera' : 'giornate intere'})<br>
-            • Ferie residue attuali: ${currentUserData.ferieResidue.toFixed(2)}h<br>
-            • Ferie residue dopo approvazione: <strong style="color: ${remaining >= 0 ? '#4CAF50' : '#f44336'}">${remaining.toFixed(2)}h</strong>
-            ${remaining < 0 ? '<br><br>⚠️ <strong>Attenzione:</strong> Non hai abbastanza ferie disponibili!' : ''}
-        `;
-    } else {
-        infoBox.innerHTML = 'Seleziona i giorni per vedere il riepilogo';
-    }
-}
-
-// Calcola giorni lavorativi (esclude weekend)
-function calculateBusinessDays(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    let count = 0;
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Non domenica e non sabato
-            count++;
-        }
-    }
-    
-    return count;
-}
-
-// Gestione invio richiesta ferie
-// Gestione invio richiesta ferie
-async function handleLeaveRequest(e) {
-    e.preventDefault();
-    
-    const hoursPerDay = 8; // Sempre giornata intera
-    const notes = document.getElementById('leaveNotes').value;
-    
-    const selectedDates = Array.from(document.querySelectorAll('input[name="selectedDates"]:checked'))
-        .map(cb => cb.value);
-    
-    if (selectedDates.length === 0) {
-        alert('Seleziona almeno un giorno');
-        return;
-    }
-    
-    let request = {
-        userId: currentUser.username,
-        type: 'single',
-        hoursPerDay,
-        notes,
-        status: 'pending',
-        requestDate: new Date().toISOString(),
-        dates: selectedDates
-    };
-    
-    // Verifica saldo ferie
-    const totalHours = selectedDates.length * hoursPerDay;
-    
-    if (DB.users[currentUser.username].ferieResidue < totalHours) {
-        if (!confirm('Non hai abbastanza ferie disponibili. Vuoi procedere comunque con la richiesta?')) {
-            return;
-        }
-    }
-    
-    // Inizializza DB.leaveRequests se non esiste
-    if (!DB.leaveRequests) {
-        DB.leaveRequests = {};
-    }
-    
-    // Genera ID univoco
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    DB.leaveRequests[requestId] = request;
-    
-    // Salva su Firebase
-    if (typeof dbRef !== 'undefined') {
-        await dbRef.leaveRequests.child(requestId).set(request);
-    }
-    
-    // Invia notifica agli admin
-    sendLeaveNotificationToAdmins(request);
-    
-    // Chiudi modale
-    document.getElementById('requestLeaveModal').style.display = 'none';
-    
-    alert('Richiesta inviata con successo! Riceverai una notifica quando verrà processata.');
-}
-
-// Invia notifica agli admin
-function sendLeaveNotificationToAdmins(request) {
-    const user = DB.users[request.userId];
-    
-    // Trova tutti gli admin
-    Object.keys(DB.users).forEach(username => {
-        if (DB.users[username].role === 'admin') {
-            // Invia notifica push se disponibile
-            if (Notification.permission === 'granted') {
-                showLocalNotification(
-                    '🏖️ Nuova Richiesta Ferie',
-                    `${user.name} ha richiesto ferie. Controlla il calendario per approvarle.`
-                );
-            }
-        }
-    });
-}
-
-// Invia notifica al dipendente
-function sendLeaveNotification(userId, status, request, specificDate = null) {
-    const user = DB.users[userId];
-    
-    let title = status === 'approved' ? '✅ Ferie Approvate' : '❌ Ferie Rifiutate';
-    let body = '';
-    
-    if (specificDate) {
-        body = `La tua richiesta per il ${formatDate(specificDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    } else if (request.type === 'period') {
-        body = `La tua richiesta dal ${formatDate(request.startDate)} al ${formatDate(request.endDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    } else {
-        body = `La tua richiesta per ${request.dates.length} giorn${request.dates.length === 1 ? 'o' : 'i'} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    }
-    
-    if (Notification.permission === 'granted') {
-        showLocalNotification(title, body);
-    }
-}
-
-// Controlla ferie in arrivo (7 giorni prima)
-function checkUpcomingLeave() {
-    if (!currentUser || currentUser.role !== 'admin') return;
-    if (!DB.leaveRequests) return;
-    
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    
-    Object.keys(DB.leaveRequests).forEach(requestId => {
-        const request = DB.leaveRequests[requestId];
-        
-        if (request.status !== 'approved') return;
-        
-        if (request.type === 'period') {
-            const startDate = new Date(request.startDate);
-            
-            if (startDate >= today && startDate <= nextWeek) {
-                const user = DB.users[request.userId];
-                showLocalNotification(
-                    '📅 Promemoria Ferie',
-                    `${user.name} inizia le ferie il ${formatDate(request.startDate)}`
-                );
-            }
-        }
-    });
-}
-
 // Controlla timbrature mancanti
 function checkMissingTimeEntries() {
     const today = new Date();
@@ -3094,14 +2115,6 @@ function checkMissingTimeEntries() {
 
 // Programma controlli automatici
 function scheduleLeaveChecks() {
-    // Controlla ferie in arrivo ogni giorno alle 9:00
-    setInterval(() => {
-        const now = new Date();
-        if (now.getHours() === 9 && now.getMinutes() === 0) {
-            checkUpcomingLeave();
-        }
-    }, 60000);
-    
     // Controlla timbrature mancanti ogni giorno alle 20:00
     setInterval(() => {
         const now = new Date();
@@ -3111,76 +2124,11 @@ function scheduleLeaveChecks() {
     }, 60000);
 }
 
-// Cancella richiesta ferie e restituisci ore se era approvata
-async function deleteLeaveRequest(requestId) {
-    if (!DB.leaveRequests || !DB.leaveRequests[requestId]) return;
-    
-    const request = DB.leaveRequests[requestId];
-    
-    // Conferma cancellazione
-    const confirmMsg = request.status === 'approved' 
-        ? `Sei sicuro di voler cancellare questa richiesta approvata?\nLe ore verranno restituite al dipendente.`
-        : `Sei sicuro di voler cancellare questa richiesta?`;
-    
-    if (!confirm(confirmMsg)) return;
-    
-    // Se era approvata, restituisci le ore
-    if (request.status === 'approved') {
-        const user = DB.users[request.userId];
-        let totalHours = 0;
-        
-        if (request.type === 'period') {
-            const businessDays = calculateBusinessDays(request.startDate, request.endDate);
-            totalHours = businessDays * request.hoursPerDay;
-        } else {
-            // Conta solo i giorni effettivamente approvati
-            if (request.approvedDates && request.approvedDates.length > 0) {
-                totalHours = request.approvedDates.length * request.hoursPerDay;
-            } else {
-                totalHours = request.dates.length * request.hoursPerDay;
-            }
-        }
-        
-        // Restituisci le ore
-        user.ferieResidue += totalHours;
-        
-        // Salva su Firebase
-        if (typeof dbRef !== 'undefined') {
-            await dbRef.users.child(request.userId).child('ferieResidue').set(user.ferieResidue);
-        }
-        
-        console.log(`✅ Restituite ${totalHours}h a ${user.name}`);
-    }
-    
-    // Cancella la richiesta
-    delete DB.leaveRequests[requestId];
-    
-    // Cancella da Firebase
-    if (typeof dbRef !== 'undefined') {
-        await dbRef.leaveRequests.child(requestId).remove();
-    }
-    
-    // Aggiorna visualizzazione
-    renderLeaveCalendar();
-    renderPendingRequests();
-    updateLeaveBalance();
-    
-    alert('Richiesta cancellata con successo' + (request.status === 'approved' ? ' e ore restituite!' : '!'));
-}
-
 // Formatta data per visualizzazione
 function formatDate(dateStr) {
     const date = new Date(dateStr);
     const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('it-IT', options);
-}
-
-// Controlla se una data è in un intervallo
-function isDateInRange(dateStr, startDate, endDate) {
-    const date = new Date(dateStr);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return date >= start && date <= end;
 }
 
 // ==================== SISTEMA CENTRO NOTIFICHE ====================
@@ -3214,7 +2162,6 @@ function initNotificationCenter() {
     
     // Filtri notifiche
     document.getElementById('filterAllNotifications')?.addEventListener('click', () => filterNotifications('all'));
-    document.getElementById('filterLeaveNotifications')?.addEventListener('click', () => filterNotifications('leave'));
     document.getElementById('filterTimeNotifications')?.addEventListener('click', () => filterNotifications('time'));
     document.getElementById('filterSystemNotifications')?.addEventListener('click', () => filterNotifications('system'));
     
@@ -3465,42 +2412,3 @@ function formatNotificationTime(timestamp) {
     return time.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
-// Modifica le funzioni esistenti per inviare notifiche
-
-// Quando admin approva/rifiuta ferie (modifica handleLeaveApproval)
-const originalSendLeaveNotification = sendLeaveNotification;
-sendLeaveNotification = function(userId, status, request, specificDate = null) {
-    const title = status === 'approved' ? '✅ Ferie Approvate' : '❌ Ferie Rifiutate';
-    let message = '';
-    
-    if (specificDate) {
-        message = `La tua richiesta per il ${formatDate(specificDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    } else if (request.type === 'period') {
-        message = `La tua richiesta dal ${formatDate(request.startDate)} al ${formatDate(request.endDate)} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    } else {
-        message = `La tua richiesta per ${request.dates.length} giorn${request.dates.length === 1 ? 'o' : 'i'} è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}.`;
-    }
-    
-    createNotification(userId, 'leave', title, message, { requestId: request.id || 'unknown', status });
-    originalSendLeaveNotification(userId, status, request, specificDate);
-};
-
-// Quando dipendente richiede ferie (modifica sendLeaveNotificationToAdmins)
-const originalSendLeaveNotificationToAdmins = sendLeaveNotificationToAdmins;
-sendLeaveNotificationToAdmins = function(request) {
-    const user = DB.users[request.userId];
-    
-    Object.keys(DB.users).forEach(username => {
-        if (DB.users[username].role === 'admin') {
-            createNotification(
-                username,
-                'leave',
-                '🏖️ Nuova Richiesta Ferie',
-                `${user.name} ha richiesto ferie. Controlla il calendario per approvarle.`,
-                { requestId: request.id || 'unknown', userId: request.userId }
-            );
-        }
-    });
-    
-    originalSendLeaveNotificationToAdmins(request);
-};
