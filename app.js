@@ -54,6 +54,15 @@ const DB = {
             contractType: 'fulltime',
             ferieResidue: 0,
             rolResidui: 0
+        },
+        'andrea_atzeri': {
+            username: 'andrea_atzeri',
+            password: null,
+            name: 'Andrea Atzeri',
+            role: 'employee',
+            contractType: 'fulltime',
+            ferieResidue: 0,
+            rolResidui: 0
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }

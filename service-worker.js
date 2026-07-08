@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v6';  // ← Incrementato per forzare aggiornamento (aggiunta Silvia Pinali)
+const CACHE_NAME = 'ore-dipendenti-v7';  // ← Incrementato per forzare aggiornamento (aggiunta Andrea Atzeri)
 const urlsToCache = [
   './',
   './index.html',
