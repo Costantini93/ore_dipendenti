@@ -49,6 +49,13 @@ const DB = {
             name: 'Andrea Atzeri',
             role: 'employee',
             contractType: 'fulltime'
+        },
+        'federico_pinfari': {
+            username: 'federico_pinfari',
+            password: null,
+            name: 'Federico Pinfari',
+            role: 'employee',
+            contractType: 'fulltime'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
