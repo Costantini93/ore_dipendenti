@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v8';  // ← Incrementato: rimossi saldo ferie/ROL e sistema richieste ferie
+const CACHE_NAME = 'ore-dipendenti-v9';  // ← Incrementato: aggiunto utente Federico Pinfari
 const urlsToCache = [
   './',
   './index.html',
