@@ -91,7 +91,7 @@ const DB = {
             username: 'prova',
             password: null,
             name: 'Account Prova',
-            role: 'employee',
+            role: 'admin',
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
         }

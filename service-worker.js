@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v11';  // ← Incrementato: aggiunto account prova su Ammiraglio Caffè
+const CACHE_NAME = 'ore-dipendenti-v12';  // ← Incrementato: account prova diventa admin (vista tabella + export Excel)
 const urlsToCache = [
   './',
   './index.html',
