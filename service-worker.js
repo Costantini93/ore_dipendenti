@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v9';  // ← Incrementato: aggiunto utente Federico Pinfari
+const CACHE_NAME = 'ore-dipendenti-v10';  // ← Incrementato: aggiunta sede Ammiraglio Caffè, spostati Jonathan e Andrea, aggiunti Pietro Salvagno e Alice Oliboni
 const urlsToCache = [
   './',
   './index.html',

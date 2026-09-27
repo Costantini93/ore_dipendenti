@@ -159,6 +159,16 @@
                     </select>
                 </div>
 
+                <!-- Admin: Filtro sede per Vista Lista -->
+                <div id="tableLocationFilter" class="admin-section" style="display: none;">
+                    <label for="tableLocationSelect">Sede:</label>
+                    <select id="tableLocationSelect" class="user-select">
+                        <option value="all">Tutte le sedi</option>
+                        <option value="skalette_bistro">Skalette Bistrò</option>
+                        <option value="ammiraglio_caffe">Ammiraglio Caffè</option>
+                    </select>
+                </div>
+
                 <!-- Admin: User Management -->
                 <div id="adminUserManagement" class="admin-section modal" style="display: none;">
                     <div class="modal-content" style="max-width: 900px;">
@@ -308,6 +318,13 @@
                         <option value="fulltime">Full Time</option>
                         <option value="parttime">Part Time</option>
                         <option value="none">Nessuno</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="userLocation">Sede</label>
+                    <select id="userLocation" name="userLocation" required>
+                        <option value="skalette_bistro">Skalette Bistrò</option>
+                        <option value="ammiraglio_caffe">Ammiraglio Caffè</option>
                     </select>
                 </div>
                 <div class="modal-actions">

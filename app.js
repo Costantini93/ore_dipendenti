@@ -1,3 +1,9 @@
+// Sedi disponibili
+const LOCATIONS = {
+    skalette_bistro: 'Skalette Bistrò',
+    ammiraglio_caffe: 'Ammiraglio Caffè'
+};
+
 // Database simulato (in produzione usare un database reale)
 const DB = {
     users: {
@@ -6,56 +12,80 @@ const DB = {
             password: null,
             name: 'Denise Raimondi',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
         },
         'maria_costandache': {
             username: 'maria_costandache',
             password: null,
             name: 'Maria Costandache',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
         },
         'jonathan_gabrieli': {
             username: 'jonathan_gabrieli',
             password: null,
             name: 'Jonathan Gabrieli',
             role: 'admin',
-            contractType: 'none'
+            contractType: 'none',
+            location: 'ammiraglio_caffe'
         },
         'sofia_bilianska': {
             username: 'sofia_bilianska',
             password: null,
             name: 'Sofia Bilianska',
             role: 'employee',
-            contractType: 'none'
+            contractType: 'none',
+            location: 'skalette_bistro'
         },
         'gessica_basov': {
             username: 'gessica_basov',
             password: null,
             name: 'Gessica Basov',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
         },
         'silvia_pinali': {
             username: 'silvia_pinali',
             password: null,
             name: 'Silvia Pinali',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
         },
         'andrea_atzeri': {
             username: 'andrea_atzeri',
             password: null,
             name: 'Andrea Atzeri',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'ammiraglio_caffe'
         },
         'federico_pinfari': {
             username: 'federico_pinfari',
             password: null,
             name: 'Federico Pinfari',
             role: 'employee',
-            contractType: 'fulltime'
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
+        },
+        'pietro_salvagno': {
+            username: 'pietro_salvagno',
+            password: null,
+            name: 'Pietro Salvagno',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'ammiraglio_caffe'
+        },
+        'alice_oliboni': {
+            username: 'alice_oliboni',
+            password: null,
+            name: 'Alice Oliboni',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'ammiraglio_caffe'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -67,6 +97,7 @@ let currentUser = null;
 let currentDate = new Date();
 let selectedUser = null; // Per l'admin
 let currentView = 'calendar'; // 'calendar' o 'table'
+let currentTableLocation = 'all'; // 'all' oppure una chiave di LOCATIONS, filtro per la vista tabella admin
 
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', async () => {
@@ -446,6 +477,7 @@ function initApp() {
             document.getElementById('userPassword').value = '1234';
             document.getElementById('userRole').value = 'employee';
             document.getElementById('userContractType').value = 'fulltime';
+            document.getElementById('userLocation').value = 'skalette_bistro';
 
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
@@ -502,6 +534,7 @@ function initApp() {
             const password = document.getElementById('userPassword').value;
             const role = document.getElementById('userRole').value;
             const contractType = document.getElementById('userContractType').value;
+            const location = document.getElementById('userLocation').value;
 
             // Validazione username non vuoto
             if (!username) {
@@ -518,7 +551,8 @@ function initApp() {
             const userData = {
                 name,
                 role,
-                contractType
+                contractType,
+                location
             };
 
             // Aggiungi password solo se è un nuovo utente o se è stata cambiata
@@ -619,6 +653,15 @@ function initApp() {
         switchView('table');
     });
 
+    // Filtro sede per la vista tabella (admin)
+    const tableLocationSelect = document.getElementById('tableLocationSelect');
+    if (tableLocationSelect) {
+        tableLocationSelect.addEventListener('change', (e) => {
+            currentTableLocation = e.target.value;
+            renderEmployeeTable();
+        });
+    }
+
     // Export Excel
     document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
 
@@ -691,7 +734,7 @@ function renderUsersList() {
                         <span class="user-badge badge-${user.role}">${user.role === 'admin' ? 'Admin' : 'Dipendente'}</span>
                     </div>
                     <div class="user-meta">
-                        @${username}
+                        @${username} · ${LOCATIONS[user.location] || 'Senza sede'}
                     </div>
                 </div>
             </div>
@@ -727,15 +770,36 @@ function populateUserSelect() {
     
     console.log('🔄 Aggiornamento menu utenti, utenti nel DB:', Object.keys(DB.users));
     userSelect.innerHTML = '';
-    
-    Object.keys(DB.users).forEach(username => {
+
+    // Raggruppa gli utenti per sede
+    Object.keys(LOCATIONS).forEach(locationKey => {
+        const usersInLocation = Object.keys(DB.users).filter(username => DB.users[username].location === locationKey);
+        if (usersInLocation.length === 0) return;
+
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = LOCATIONS[locationKey];
+
+        usersInLocation.forEach(username => {
+            const user = DB.users[username];
+            const option = document.createElement('option');
+            option.value = username;
+            option.textContent = user.name + (username === currentUser.username ? ' (Tu)' : '');
+            optgroup.appendChild(option);
+        });
+
+        userSelect.appendChild(optgroup);
+    });
+
+    // Utenti senza sede assegnata (fallback di sicurezza)
+    const usersWithoutLocation = Object.keys(DB.users).filter(username => !LOCATIONS[DB.users[username].location]);
+    usersWithoutLocation.forEach(username => {
         const user = DB.users[username];
         const option = document.createElement('option');
         option.value = username;
         option.textContent = user.name + (username === currentUser.username ? ' (Tu)' : '');
         userSelect.appendChild(option);
     });
-    
+
     // Seleziona l'utente corrente se esiste
     if (selectedUser && DB.users[selectedUser]) {
         userSelect.value = selectedUser;
@@ -760,6 +824,7 @@ async function editUser(username) {
     document.getElementById('userPassword').placeholder = 'Lascia vuoto per mantenere';
     document.getElementById('userRole').value = user.role;
     document.getElementById('userContractType').value = user.contractType || 'none';
+    document.getElementById('userLocation').value = user.location || 'skalette_bistro';
     document.getElementById('userModal').style.display = 'flex';
 }
 
@@ -845,7 +910,8 @@ function switchView(view) {
     const tableBtn = document.getElementById('tableViewBtn');
     const adminSection = document.getElementById('adminUserSelection');
     const monthlySummary = document.querySelector('.monthly-summary');
-    
+    const tableLocationFilter = document.getElementById('tableLocationFilter');
+
     if (view === 'calendar') {
         calendarView.classList.add('active');
         tableView.classList.remove('active');
@@ -853,6 +919,7 @@ function switchView(view) {
         tableBtn.classList.remove('active');
         // Mostra dropdown solo se admin
         adminSection.style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+        if (tableLocationFilter) tableLocationFilter.style.display = 'none';
         monthlySummary.style.display = 'grid';
         renderCalendar();
     } else {
@@ -861,6 +928,7 @@ function switchView(view) {
         calendarBtn.classList.remove('active');
         tableBtn.classList.add('active');
         adminSection.style.display = 'none';
+        if (tableLocationFilter) tableLocationFilter.style.display = currentUser.role === 'admin' ? 'flex' : 'none';
         monthlySummary.style.display = 'none';
         renderEmployeeTable();
     }
@@ -1224,14 +1292,16 @@ function renderEmployeeTable() {
     // Aggiorna titolo mese
     updateMonthDisplay();
     
-    // Ottieni tutti gli utenti (admin + dipendenti)
-    const employees = Object.values(DB.users).sort((a, b) => {
-        // Admin per primo
-        if (a.role === 'admin') return -1;
-        if (b.role === 'admin') return 1;
-        return a.name.localeCompare(b.name);
-    });
-    
+    // Ottieni tutti gli utenti (admin + dipendenti), filtrati per sede se selezionato
+    const employees = Object.values(DB.users)
+        .filter(user => currentTableLocation === 'all' || user.location === currentTableLocation)
+        .sort((a, b) => {
+            // Admin per primo
+            if (a.role === 'admin') return -1;
+            if (b.role === 'admin') return 1;
+            return a.name.localeCompare(b.name);
+        });
+
     // Numero di giorni nel mese
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
@@ -1391,8 +1461,9 @@ function exportToExcel() {
 }
 
 async function exportTableViewToExcel(month) {
-    // Include admin + employees
-    const allUsers = Object.keys(DB.users);
+    // Include admin + employees, filtrati per sede se selezionato nella vista tabella
+    const allUsers = Object.keys(DB.users)
+        .filter(username => currentTableLocation === 'all' || DB.users[username].location === currentTableLocation);
     const year = currentDate.getFullYear();
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
