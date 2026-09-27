@@ -87,11 +87,11 @@ const DB = {
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
         },
-        'prova': {
-            username: 'prova',
+        'natalia_guk': {
+            username: 'natalia_guk',
             password: null,
-            name: 'Account Prova',
-            role: 'admin',
+            name: 'Natalia Guk',
+            role: 'employee',
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
         }
@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Cleanup one-shot: rimuove utenti eliminati da tutto il database Firebase
 async function cleanupRemovedUsers() {
-    const REMOVED_USERS = ['sandy_oduro'];
-    const FLAG_KEY = 'cleanup_removed_users_v1';
+    const REMOVED_USERS = ['sandy_oduro', 'prova'];
+    const FLAG_KEY = 'cleanup_removed_users_v2';
     if (localStorage.getItem(FLAG_KEY) === 'done') return;
     if (typeof firebase === 'undefined' || !dbRef) return;
     try {

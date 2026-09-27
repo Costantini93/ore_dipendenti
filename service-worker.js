@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v12';  // ← Incrementato: account prova diventa admin (vista tabella + export Excel)
+const CACHE_NAME = 'ore-dipendenti-v13';  // ← Incrementato: rimosso account prova, aggiunta Natalia Guk su Ammiraglio Caffè
 const urlsToCache = [
   './',
   './index.html',
