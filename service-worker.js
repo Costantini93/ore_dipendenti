@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v10';  // ← Incrementato: aggiunta sede Ammiraglio Caffè, spostati Jonathan e Andrea, aggiunti Pietro Salvagno e Alice Oliboni
+const CACHE_NAME = 'ore-dipendenti-v11';  // ← Incrementato: aggiunto account prova su Ammiraglio Caffè
 const urlsToCache = [
   './',
   './index.html',

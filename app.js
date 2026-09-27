@@ -86,6 +86,14 @@ const DB = {
             role: 'employee',
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
+        },
+        'prova': {
+            username: 'prova',
+            password: null,
+            name: 'Account Prova',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'ammiraglio_caffe'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
