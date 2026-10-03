@@ -51,7 +51,7 @@ const DB = {
             username: 'silvia_pinali',
             password: null,
             name: 'Silvia Pinali',
-            role: 'employee',
+            role: 'admin',
             contractType: 'fulltime',
             location: 'skalette_bistro'
         },

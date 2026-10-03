@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v13';  // ← Incrementato: rimosso account prova, aggiunta Natalia Guk su Ammiraglio Caffè
+const CACHE_NAME = 'ore-dipendenti-v14';  // ← Incrementato: Silvia Pinali diventa admin
 const urlsToCache = [
   './',
   './index.html',
