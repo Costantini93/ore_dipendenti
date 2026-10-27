@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v14';  // ← Incrementato: Silvia Pinali diventa admin
+const CACHE_NAME = 'ore-dipendenti-v15';  // ← Incrementato: aggiunte Silvia Amuganu e Andrea Pelagatti su Skalette Bistrò
 const urlsToCache = [
   './',
   './index.html',

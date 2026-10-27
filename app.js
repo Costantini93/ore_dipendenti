@@ -94,6 +94,22 @@ const DB = {
             role: 'employee',
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
+        },
+        'silvia_amuganu': {
+            username: 'silvia_amuganu',
+            password: null,
+            name: 'Silvia Amuganu',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
+        },
+        'andrea_pelagatti': {
+            username: 'andrea_pelagatti',
+            password: null,
+            name: 'Andrea Pelagatti',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'skalette_bistro'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
