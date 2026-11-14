@@ -110,6 +110,14 @@ const DB = {
             role: 'employee',
             contractType: 'fulltime',
             location: 'skalette_bistro'
+        },
+        'michael_carlotto': {
+            username: 'michael_carlotto',
+            password: null,
+            name: 'Michael Carlotto',
+            role: 'employee',
+            contractType: 'fulltime',
+            location: 'ammiraglio_caffe'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }

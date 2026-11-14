@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v15';  // ← Incrementato: aggiunte Silvia Amuganu e Andrea Pelagatti su Skalette Bistrò
+const CACHE_NAME = 'ore-dipendenti-v16';  // ← Incrementato: aggiunto Michael Carlotto su Ammiraglio Caffè
 const urlsToCache = [
   './',
   './index.html',
