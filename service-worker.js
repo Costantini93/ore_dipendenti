@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v17';  // ← Incrementato: nuova sede Cucina, Umesh admin limitato a Cucina
+const CACHE_NAME = 'ore-dipendenti-v18';  // ← Incrementato: fix centratura modali su mobile (Aggiungi Utente si apriva piccolo)
 const urlsToCache = [
   './',
   './index.html',
