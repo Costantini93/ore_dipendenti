@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v18';  // ← Incrementato: fix centratura modali su mobile (Aggiungi Utente si apriva piccolo)
+const CACHE_NAME = 'ore-dipendenti-v19';  // ← Incrementato: fix pannello Gestione Utenti (spazio vuoto su mobile)
 const urlsToCache = [
   './',
   './index.html',
