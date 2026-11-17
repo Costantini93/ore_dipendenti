@@ -1,7 +1,8 @@
 // Sedi disponibili
 const LOCATIONS = {
     skalette_bistro: 'Skalette Bistrò',
-    ammiraglio_caffe: 'Ammiraglio Caffè'
+    ammiraglio_caffe: 'Ammiraglio Caffè',
+    cucina: 'Cucina'
 };
 
 // Database simulato (in produzione usare un database reale)
@@ -118,6 +119,15 @@ const DB = {
             role: 'employee',
             contractType: 'fulltime',
             location: 'ammiraglio_caffe'
+        },
+        'umesh': {
+            username: 'umesh',
+            password: null,
+            name: 'Umesh',
+            role: 'admin',
+            adminScope: 'cucina', // Admin limitato: vede/gestisce solo i dipendenti della sua sede
+            contractType: 'fulltime',
+            location: 'cucina'
         }
     },
     timeEntries: {}, // Formato: { username: { 'YYYY-MM-DD': { type, startTime, endTime, hours } } }
@@ -511,6 +521,19 @@ function initApp() {
             document.getElementById('userContractType').value = 'fulltime';
             document.getElementById('userLocation').value = 'skalette_bistro';
 
+            // Admin con sede limitata: può creare solo dipendenti nella propria sede
+            const roleSelect = document.getElementById('userRole');
+            const locationSelect = document.getElementById('userLocation');
+            if (currentUser.adminScope) {
+                roleSelect.value = 'employee';
+                roleSelect.disabled = true;
+                locationSelect.value = currentUser.adminScope;
+                locationSelect.disabled = true;
+            } else {
+                roleSelect.disabled = false;
+                locationSelect.disabled = false;
+            }
+
             document.getElementById('userPassword').required = true;
             document.getElementById('userPassword').placeholder = '';
             userModal.style.display = 'flex';
@@ -750,8 +773,13 @@ function renderUsersList() {
     if (!usersList) return;
 
     usersList.innerHTML = '';
-    
-    Object.keys(DB.users).forEach(username => {
+
+    // Admin con sede limitata: vede solo i dipendenti della propria sede
+    const visibleUsernames = currentUser.adminScope
+        ? Object.keys(DB.users).filter(username => DB.users[username].location === currentUser.adminScope)
+        : Object.keys(DB.users);
+
+    visibleUsernames.forEach(username => {
         const user = DB.users[username];
         const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
 
@@ -803,9 +831,14 @@ function populateUserSelect() {
     console.log('🔄 Aggiornamento menu utenti, utenti nel DB:', Object.keys(DB.users));
     userSelect.innerHTML = '';
 
+    // Admin con sede limitata: vede solo i dipendenti della propria sede
+    const visibleUsernames = currentUser.adminScope
+        ? Object.keys(DB.users).filter(username => DB.users[username].location === currentUser.adminScope)
+        : Object.keys(DB.users);
+
     // Raggruppa gli utenti per sede
     Object.keys(LOCATIONS).forEach(locationKey => {
-        const usersInLocation = Object.keys(DB.users).filter(username => DB.users[username].location === locationKey);
+        const usersInLocation = visibleUsernames.filter(username => DB.users[username].location === locationKey);
         if (usersInLocation.length === 0) return;
 
         const optgroup = document.createElement('optgroup');
@@ -823,7 +856,7 @@ function populateUserSelect() {
     });
 
     // Utenti senza sede assegnata (fallback di sicurezza)
-    const usersWithoutLocation = Object.keys(DB.users).filter(username => !LOCATIONS[DB.users[username].location]);
+    const usersWithoutLocation = visibleUsernames.filter(username => !LOCATIONS[DB.users[username].location]);
     usersWithoutLocation.forEach(username => {
         const user = DB.users[username];
         const option = document.createElement('option');
@@ -857,6 +890,9 @@ async function editUser(username) {
     document.getElementById('userRole').value = user.role;
     document.getElementById('userContractType').value = user.contractType || 'none';
     document.getElementById('userLocation').value = user.location || 'skalette_bistro';
+    // Admin con sede limitata: non può cambiare ruolo o sede di un dipendente
+    document.getElementById('userRole').disabled = !!currentUser.adminScope;
+    document.getElementById('userLocation').disabled = !!currentUser.adminScope;
     document.getElementById('userModal').style.display = 'flex';
 }
 
@@ -960,7 +996,7 @@ function switchView(view) {
         calendarBtn.classList.remove('active');
         tableBtn.classList.add('active');
         adminSection.style.display = 'none';
-        if (tableLocationFilter) tableLocationFilter.style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+        if (tableLocationFilter) tableLocationFilter.style.display = (currentUser.role === 'admin' && !currentUser.adminScope) ? 'flex' : 'none';
         monthlySummary.style.display = 'none';
         renderEmployeeTable();
     }
@@ -1325,8 +1361,10 @@ function renderEmployeeTable() {
     updateMonthDisplay();
     
     // Ottieni tutti gli utenti (admin + dipendenti), filtrati per sede se selezionato
+    // Un admin con sede limitata (adminScope) vede sempre e solo la propria sede
+    const effectiveLocation = currentUser.adminScope || currentTableLocation;
     const employees = Object.values(DB.users)
-        .filter(user => currentTableLocation === 'all' || user.location === currentTableLocation)
+        .filter(user => effectiveLocation === 'all' || user.location === effectiveLocation)
         .sort((a, b) => {
             // Admin per primo
             if (a.role === 'admin') return -1;
@@ -1494,8 +1532,10 @@ function exportToExcel() {
 
 async function exportTableViewToExcel(month) {
     // Include admin + employees, filtrati per sede se selezionato nella vista tabella
+    // Un admin con sede limitata (adminScope) esporta sempre e solo la propria sede
+    const effectiveLocation = currentUser.adminScope || currentTableLocation;
     const allUsers = Object.keys(DB.users)
-        .filter(username => currentTableLocation === 'all' || DB.users[username].location === currentTableLocation);
+        .filter(username => effectiveLocation === 'all' || DB.users[username].location === effectiveLocation);
     const year = currentDate.getFullYear();
     const monthIndex = currentDate.getMonth();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();

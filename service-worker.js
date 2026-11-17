@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ore-dipendenti-v16';  // ← Incrementato: aggiunto Michael Carlotto su Ammiraglio Caffè
+const CACHE_NAME = 'ore-dipendenti-v17';  // ← Incrementato: nuova sede Cucina, Umesh admin limitato a Cucina
 const urlsToCache = [
   './',
   './index.html',
